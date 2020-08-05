@@ -34,7 +34,7 @@ def main(args):
     # the three files, train.tsv, validation.tsv and test.tsv
     # and those files reside in the folder named "data".
     ######
-    chat=["exam", "transgender", "homophobic", "lgbt"]
+    chat=["feminine", "feminist"]
     tags=[]
     # 3.2.1
 

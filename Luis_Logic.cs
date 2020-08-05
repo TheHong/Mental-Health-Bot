@@ -5,32 +5,37 @@ using Distance_Func;
 using System.Linq;
 namespace wordVecDistance{
   static class globals{
-    public static string GV_PATH=".vector_cache/glove.6B.50d.txt";
+    public static string GV_PATH=".vector_cache/glove.6B.100d.txt";
     public static string TAG_PATH="Data/Tags.txt";
     public static string KEY_WORDS_PATH="Data/Key_words.txt"; //TODO: connect it directly to Luis
     
     public static char[] DELIM={ ' ', '\t', '\n', '\r'};
     public static int MAX_TAGS=3;
-    public static void softmax(double[] values){
+    public static void softmax_neg(double[] values){
       for (int i=0; i<values.Length; i++){
-        values[i]=(double)Math.Exp(values[i]);
+        values[i]=(double)Math.Exp(-values[i]);
       }
+      
       double sum=values.Sum();
+      
       for (int i=0; i<values.Length; i++){
         values[i]=values[i]/sum;
       }    
     }
-    public static void incr_reciprocal(double[] values, double incr){
-      for (int i=0; i<values.Length; i++){
-        values[i]=1/(values[i]+incr);
-      }
-    }
+    
     public static double Euclidean(List<double> vec1, List<double> vec2){
       double distance=0;
       for (int i=0; i<vec1.Count; i++){
         distance+= Math.Pow(vec1[i]-vec2[i], 2);
       } 
-      return distance;
+      return Math.Sqrt(distance);
+    }
+  }
+  public class Word_Prob{
+    public string word;
+    public double prob;
+    public void print(){
+      Console.WriteLine("{0} : {1}", this.word, this.prob);
     }
   }
   class Embedding{//TODO: change some of the types (arrays->list)
@@ -76,14 +81,15 @@ namespace wordVecDistance{
         }
       }
     }
-    public List <List<string>> list_tags(Embedding tag_list){//watch out for copying reference vs values
+    public List <List<Word_Prob>> list_tags(Embedding tag_list){//watch out for copying reference vs values
   
-      List <List<string>> all_tags= new List<List<string>>();
+      List <List<Word_Prob>> all_tags= new List<List<Word_Prob>>();
 
       double[] distances= new double[tag_list.num_ex];
 
+
       foreach(List<double> vector in this.vectors){
-        List<string> tags=new List<string>();
+        List<Word_Prob> tags=new List<Word_Prob>();
         
         for(int i=0; i<tag_list.num_ex;i++){
           distances[i]=(double)globals.Euclidean(vector, tag_list.vectors[i]);
@@ -91,10 +97,8 @@ namespace wordVecDistance{
         }
 
 
-        globals.incr_reciprocal(distances, 0.01);
-        globals.softmax(distances);
+        globals.softmax_neg(distances);
 
-        // Array.ForEach(distances, Console.WriteLine);
 
         double [] distances_copy= new double[tag_list.num_ex];
         distances.CopyTo(distances_copy,0);
@@ -107,7 +111,10 @@ namespace wordVecDistance{
 
         double [] max_prob=distances[num_tags..];
         for (int i=max_prob.Length-1; i>-1; i--){//put most likely first
-          tags.Add(tag_list.itos[Array.IndexOf(distances_copy, max_prob[i])]);
+
+          tags.Add(new Word_Prob(){
+            word=tag_list.itos[Array.IndexOf(distances_copy, max_prob[i])],
+            prob=max_prob[i]});
         }
 
         all_tags.Add(tags);
@@ -117,35 +124,7 @@ namespace wordVecDistance{
     }
 
   }
-  class Program
-  {
-    public static void Main(string[] args)
-    {      
-      Embedding gv=new Embedding();
-      Embedding tag_list_emb=new Embedding();
-      Embedding key_words_emb=new Embedding();
-      gv.load_from_file(globals.GV_PATH); 
-
-      Console.WriteLine("done loading");
-
-      string [] tag_list=File.ReadAllText(globals.TAG_PATH).Split(globals.DELIM);
-      tag_list = Array.ConvertAll(tag_list, d => d.ToLower());
-
-      string [] key_words=File.ReadAllText(globals.KEY_WORDS_PATH).Split(globals.DELIM);
-      key_words = Array.ConvertAll(key_words, d => d.ToLower());
-
-
-      tag_list_emb.load(tag_list, gv);
-      key_words_emb.load(key_words, gv);
-      List <List<string>> tags=key_words_emb.list_tags(tag_list_emb);
-      Console.WriteLine("end------");
-      for (int i=0; i<key_words_emb.num_ex; i++){
-        Console.WriteLine("word: {0}", key_words[i]);
-        tags[i].ForEach(Console.WriteLine);
-      }
-      
-
-    }
-  }
+  
+    
 
 }
