@@ -1,3 +1,7 @@
+using System;
+using System.IO;
+using Distance_Func;
+using System.Linq;
 namespace MyEchoBot
 {
     public class Resource{
@@ -5,9 +9,13 @@ namespace MyEchoBot
         public string link;
         public string info;
         public string[] tags;
+
     }
+
     public class InputProcessing
     {
+        Resource [] resources= new Resource[]{};
+
         public string[] GetTags(string[] keywords){
             return new string[1];
         }
