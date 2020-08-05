@@ -1,7 +1,4 @@
 ﻿// Adapted from EchoBot .NET Template version v4.9.1
-/*
-Despite its name, it's not actually an echo bot. It is only based on the echo bot structure.
-*/
 
 using System.Collections.Generic;
 using System.Threading;
@@ -9,16 +6,19 @@ using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 
-namespace MyEchoBot.Bots
+namespace MHBot.Bots
 {
-    public class EchoBot : ActivityHandler
+    public class Felix : ActivityHandler
     {
         private readonly Recognizer _luisRecognizer = new Recognizer();
+        private BotState _userState;
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
+            // Text that user inputted
+            var text = turnContext.Activity.Text; // .ToLowerInvariant();
 
-            var text = turnContext.Activity.Text;
+            // Info to be returned
             string info;
 
             UserMsg userMsg = new UserMsg();
@@ -77,9 +77,9 @@ namespace MyEchoBot.Bots
             card.Images = new List<CardImage>() { new CardImage("https://aka.ms/bf-welcome-card-image") };
             card.Buttons = new List<CardAction>()
             {
-                new CardAction(ActionTypes.OpenUrl, "Tell me about yourself, Felix.", null, "Get an overview", "Get an overview", "https://docs.microsoft.com/en-us/azure/bot-service/?view=azure-bot-service-4.0"),
-                new CardAction(ActionTypes.OpenUrl, "Please redirect me to an operator.", null, "Ask a question", "Ask a question", "https://stackoverflow.com/questions/tagged/botframework"),
-                new CardAction(ActionTypes.OpenUrl, "How are you today, Felix?", null, "Learn how to deploy", "Learn how to deploy", "https://docs.microsoft.com/en-us/azure/bot-service/bot-builder-howto-deploy-azure?view=azure-bot-service-4.0"),
+                new CardAction(ActionTypes.ImBack, "Tell me about yourself, Felix.", null, null, "Tell me about yourself, Felix", "Tell me about yourself, Felix", null),
+                new CardAction(ActionTypes.ImBack, "Please redirect me to an operator.", null, null, "Please redirect me to an operator.", "Please redirect me to an operator.", null),
+                new CardAction(ActionTypes.ImBack, "How are you today, Felix?", null, null, "How are you today, Felix?", "How are you today, Felix?", null),
             };
 
             var response = MessageFactory.Attachment(card.ToAttachment());
