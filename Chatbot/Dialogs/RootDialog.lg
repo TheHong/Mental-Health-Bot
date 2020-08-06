@@ -1,0 +1,35 @@
+﻿> Language Generation definition file. 
+> Prebuilt functions: https://docs.microsoft.com/en-us/azure/bot-service/adaptive-expressions/adaptive-expressions-prebuilt-functions?view=azure-bot-service-4.0
+
+# UrgentIntent
+- Call 911
+
+# ConversationIntent
+- Dis is conversational
+
+# UnknownIntent
+- Dis is unknown intentional
+
+# ResourceIntent
+- Let me redirect you to some resources.
+- I'm going to provide some resources that may be of help.
+
+# MoreInfoPrompt
+- I would love learn more. Can you tell me more about what's happening?
+- Could you tell me briefly about the situation so I can help you better?
+
+# AskForMoreInfo
+- Great. Please let me know what's on your mind before I get some resources for you.
+- That's amazing. I am listening.
+
+# EndMoreInfo
+- Thank you for telling me that.
+- Thank you for letting me know.
+
+# EndInfo
+- I will now get resources for you.
+- Let me get the resources. I'll be back in a sec.
+
+# DisplayResources
+- Here's I found for you: ${conversation.result}
+- Here's what I got: ${conversation.result}
