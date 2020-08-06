@@ -1,7 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -134,9 +131,17 @@ namespace MHBot
             // All hail https://stackoverflow.com/questions/62861153/how-to-convert-from-xml-to-json-within-adaptive-dialog-httprequest/62924035#62924035
             Console.WriteLine("\n\nProcessing\n\n");
             var keywords = dc.State.GetValue("conversation.keywords", () => new string[0]);
-            dc.State.SetValue("conversation.result", string.Join(", ", keywords));
+            string resourcesAsStr;
 
-            // TODO: This is where keywords turn into resource strings. Currently just keywords
+            // TODO: INSERT KEYWORDS->TAGS->RESOURCES CODE HERE
+            // ...
+            ///////////////////////////////////
+
+            // TODO: Delete this, as this will be temprorary
+            resourcesAsStr = string.Join(", ", keywords);
+            /////////////////////////////////////////
+
+            dc.State.SetValue("conversation.result", resourcesAsStr);
             return await dc.EndDialogAsync();
         }
 
