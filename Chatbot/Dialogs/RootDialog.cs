@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -13,6 +16,8 @@ using Microsoft.Bot.Builder.Dialogs.Adaptive.Actions;
 using Microsoft.Bot.Builder.LanguageGeneration;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
+using Azure.AI.TextAnalytics;
+using Azure;
 
 namespace MHBot
 {
@@ -21,11 +26,17 @@ namespace MHBot
         protected readonly IConfiguration Configuration;
         private Templates _templates;
 
+        private static TextAnalyticsClient _textAnalyticsClient;
+
         public RootDialog(IConfiguration configuration)
            : base(nameof(RootDialog))
         {
             Configuration = configuration;
             _templates = Templates.ParseFile(Path.Combine(".", "Dialogs", "RootDialog.lg"));
+            _textAnalyticsClient = new TextAnalyticsClient(
+                new Uri(configuration["TextAnalyticsEndpoint"]),
+                new AzureKeyCredential(configuration["TextAnalyticsAPIKey"])
+            );
 
             // Create instance of adaptive dialog. 
             var rootDialog = new AdaptiveDialog(nameof(AdaptiveDialog))
@@ -48,6 +59,19 @@ namespace MHBot
                     // The intents here are based on intents defined in RootDialog.LU file
                     // (however, the .lu file is just for reference and the main functionality come from the LUIS resource)
                     //TODO: Add .lu file for completion
+                    new OnDialogEvent(){
+                        // Language change is just for demo purposes. 
+                        // In future, can use translate to translate foreign languages to English before using LUIS
+                        // Of course, the more nuanced approach would be to have a knowledge base for each language
+                        Event = "Language Change",
+                        Condition = "conversation.currLanguage != conversation.prevLanguage",
+                        Actions = new List<Dialog> ()
+                        {
+                            new SendActivity("${ShowLanguageSample()}"),
+                            new CodeAction(ResetLanguage),
+                            new EndDialog(),
+                        }
+                    },
                     new OnIntent()
                     {
                         Intent = "Urgent",
@@ -63,13 +87,17 @@ namespace MHBot
                         Condition = "#Conversation.Score >= 0.6",
                         Actions = new List<Dialog> ()
                         {
+                            new CodeAction(DetectLanguage),
+                            new EmitEvent("Language Change"),
                             new SendActivity("${ConversationIntent()}") // TODO: Replace with QnA
                         }
                     },
                     new OnUnknownIntent()
                     {
                         Actions = new List<Dialog>() {
-                            new SendActivity("${UnknownIntent()}")
+                            new CodeAction(DetectLanguage),
+                            new EmitEvent("Language Change"),
+                            new SendActivity("${UnknownIntent()}"),
                         }
                     },
                     new OnIntent()
@@ -125,7 +153,22 @@ namespace MHBot
             // The initial child Dialog to run.
             InitialDialogId = nameof(AdaptiveDialog);
         }
+        private static async Task<DialogTurnResult> ResetLanguage(DialogContext dc, System.Object options)
+        {
+            dc.State.SetValue("conversation.currLanguage", "English");
+            return await dc.EndDialogAsync();
+        }
 
+        private static async Task<DialogTurnResult> DetectLanguage(DialogContext dc, System.Object options)
+        {
+            string incomingText = dc.State.GetValue("turn.activity.text", () => "");
+            DetectedLanguage language = _textAnalyticsClient.DetectLanguage(incomingText);
+            if (language.ConfidenceScore > 0.8){
+                dc.State.SetValue("conversation.currLanguage", language.Name);
+            }
+            Console.WriteLine($"Detected language {language.Name} with confidence score {language.ConfidenceScore}.");
+            return await dc.EndDialogAsync();
+        }
         private static async Task<DialogTurnResult> ProcessKeywords(DialogContext dc, System.Object options)
         {
             // All hail https://stackoverflow.com/questions/62861153/how-to-convert-from-xml-to-json-within-adaptive-dialog-httprequest/62924035#62924035
@@ -173,7 +216,23 @@ namespace MHBot
                             {
                                 new SendActivity("Let's go") // To be replaced with welcome card
                             }
-                        }
+                        },
+                        new SetProperties()
+                        {
+                            Assignments = new List<PropertyAssignment>()
+                            {
+                                new PropertyAssignment()
+                                {
+                                    Property = "conversation.prevLanguage",
+                                    Value = "English"
+                                },
+                                new PropertyAssignment()
+                                {
+                                    Property = "conversation.currLanguage",
+                                    Value = "English"
+                                }
+                            }
+                        },
                     }
                 }
             };

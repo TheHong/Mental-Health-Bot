@@ -33,3 +33,15 @@
 # DisplayResources
 - Here's I found for you: ${conversation.result}
 - Here's what I got: ${conversation.result}
+
+# ShowLanguageSample
+- IF: ${conversation.currLanguage == "Chinese_Traditional" || conversation.currLanguage == "Chinese_Simplified"}
+    - 你好，我亦可以用中文来交通！
+    - 你想用中文来交通？没问题。除了英文，我也会中文！
+- ELSEIF: ${conversation.currLanguage == "French"}
+    - Bonjour! Je suis Felix et je peux aussi parler le français!
+    - Vous parlez le français? Je communiquerai en français. Quoi puis-je vous aider?
+- ELSE:
+    - Sorry, I don't speak ${conversation.currLanguage}.
+
+
