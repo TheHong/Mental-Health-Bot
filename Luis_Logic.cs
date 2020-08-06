@@ -10,7 +10,9 @@ namespace wordVecDistance{
     public static string KEY_WORDS_PATH="Data/Key_words.txt"; //TODO: connect it directly to Luis
     
     public static char[] DELIM={ ' ', '\t', '\n', '\r'};
+    public static char[] DELIM2={ ' ', ',', '"', '\t', '\n', '\r'};
     public static int MAX_TAGS=3;
+    public static int NUM_RESOURCES=3;
     public static void softmax_neg(double[] values){
       for (int i=0; i<values.Length; i++){
         values[i]=(double)Math.Exp(-values[i]);
@@ -42,11 +44,11 @@ namespace wordVecDistance{
     
 
 
-    Dictionary<string, int> stoi = new Dictionary<string, int>();
+    public Dictionary<string, int> stoi = new Dictionary<string, int>();
     public int num_ex;
-    int emb_size=-1; //-1 means unassigned
-    List <string> itos= new List<string>();
-    List <List<double>> vectors= new List <List<double>>();
+    public int emb_size=-1; //-1 means unassigned
+    public List <string> itos= new List<string>();
+    public List <List<double>> vectors= new List <List<double>>();
     public void load(string[] words, Embedding gv){
       this.itos= new List <string>(words);//change type
       this.num_ex=itos.Count;
