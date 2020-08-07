@@ -60,7 +60,7 @@ namespace MyEchoBot
             
         }
 
-        public List<Resource> GetResources(List<List<Word_Prob>> tag_prob){ //Consider changing tag_prob type
+        public List<Resource> GetResources(List<List<Word_Prob>> tag_prob){ 
             double [] scores=new double[num_resources];
 
             List <Resource> resources= new List<Resource>();
@@ -76,7 +76,7 @@ namespace MyEchoBot
                             .Select(p => p.Index)
                             .ToArray();
 
-            for (int i=score_indices.Length-1; i>score_indices.Length-globals.NUM_RESOURCES-1; i--){
+            for (int i=score_indices.Length-1; i>score_indices.Length- globals.NUM_RESOURCES -1; i--){
                
                 resources.Add(this.all_resources[score_indices[i]]);
             }

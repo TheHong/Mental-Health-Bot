@@ -45,16 +45,18 @@ class vocab():
 
 def main(args):
 
-    chat=["feminine", "feminist"]
-    gv=torchtext.vocab.GloVe(name='6B', dim=100)
-
-    other_words = ["feminine"]
-    w = {word: gv.vectors[gv.stoi[word]].numpy() for word in other_words}
-    new_corp = pd.DataFrame.from_dict(w, orient='index')
-    new_corp.to_csv('Data/new_corpus.csv', header=None, index=True, sep=' ', mode='a')
-    with open("Data/New_Corpus_Words.txt", 'a') as f:
-        for t in other_words:
-            f.write(t + '\n')
+    corpus=pd.read_csv("Data/new_corpus.csv", header=None, sep=' ')
+    corpus.to_csv("Data/New_Corpus_Words.csv", header=False, index=False, columns=[0], mode='w')
+    # chat=["feminine", "feminist"]
+    # gv=torchtext.vocab.GloVe(name='6B', dim=100)
+    #
+    # other_words = ["harassed", "boss"]
+    # w = {word: gv.vectors[gv.stoi[word]].numpy() for word in other_words}
+    # new_corp = pd.DataFrame.from_dict(w, orient='index')
+    # new_corp.to_csv('Data/new_corpus.csv', header=None, index=True, sep=' ', mode='a')
+    # with open("Data/New_Corpus_Words.txt", 'a') as f:
+    #     for t in other_words:
+    #         f.write(t + '\n')
 
 
     # with open("Data/Tags.txt", "r") as f:
