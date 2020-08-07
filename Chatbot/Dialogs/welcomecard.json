@@ -30,7 +30,7 @@
     {
       "type": "Action.Submit",
       "title": "Tell me about yourself, Felix.",
-      "data": "Tell me about yourself, Felix.",
+      "data": "Tell me about yourself, Felix."
     },
     {
       "type": "Action.Submit",
@@ -41,7 +41,7 @@
     {
       "type": "Action.Submit",
       "title": "How are you today, Felix?",
-      "data": "How are you today, Felix?",
+      "data": "How are you today, Felix?"
     }
   ]
 }

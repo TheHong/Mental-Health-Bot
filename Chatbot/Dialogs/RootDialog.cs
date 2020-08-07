@@ -21,6 +21,8 @@ using System.Threading.Tasks;
 using Azure.AI.TextAnalytics;
 using Azure;
 
+using WordVectors;
+
 namespace MHBot
 {
     public class RootDialog : ComponentDialog
@@ -30,15 +32,17 @@ namespace MHBot
 
         private static TextAnalyticsClient _textAnalyticsClient;
 
+        private static InputProcessing _inputProcessor;
+
         public RootDialog(IConfiguration configuration)
            : base(nameof(RootDialog))
         {
             Configuration = configuration;
             _templates = Templates.ParseFile(Path.Combine(".", "Dialogs", "RootDialog.lg"));
-            _textAnalyticsClient = new TextAnalyticsClient(
-                new Uri(configuration["TextAnalyticsEndpoint"]),
-                new AzureKeyCredential(configuration["TextAnalyticsAPIKey"])
-            );
+            _textAnalyticsClient = GetTextAnalyticsClient(configuration);
+            _inputProcessor = new InputProcessing();
+            _inputProcessor.load_resources("Data/UofT Mental Health Resources.txt");
+
 
             // Create instance of adaptive dialog. 
             var rootDialog = new AdaptiveDialog(nameof(AdaptiveDialog))
@@ -47,7 +51,7 @@ namespace MHBot
                 // This dialog will react to user input using its own Recognizer's output and Rules.
 
                 // Add a recognizer to the adaptive dialog.
-                Recognizer = CreateCrossTrainedRecognizer(configuration),
+                Recognizer = GetCrossTrainedRecognizer(configuration),
 
                 // Add rules to respond to different events of interest
                 Generator = new TemplateEngineLanguageGenerator(_templates),
@@ -194,14 +198,32 @@ namespace MHBot
             string resourcesAsStr;
 
             // TODO: INSERT KEYWORDS->TAGS->RESOURCES CODE HERE
-            // ...
+            Console.WriteLine(string.Join(", ", keywords));
+            List<List<WordProb>> tags = _inputProcessor.GetTags(keywords);
+            Console.WriteLine("Got {0}", tags);
+            foreach (List<WordProb> wpL in tags)
+            {
+                foreach (WordProb wp in wpL)
+                {
+                    Console.WriteLine(wp.ToStr());
+                }
+            }
+            List<Resource> resources = _inputProcessor.GetResources(tags);
+            Console.WriteLine("Got resources");
+            List<string> resourceStrings = new List<string>();
+            foreach (Resource r in resources)
+            {
+                resourceStrings.Add(r.ToStr());
+            }
+            resourcesAsStr = string.Join("\n", resourceStrings);
             ///////////////////////////////////
 
             // TODO: Delete this, as this will be temprorary
-            resourcesAsStr = string.Join(", ", keywords);
+            // resourcesAsStr = string.Join(", ", keywords);
             /////////////////////////////////////////
 
             dc.State.SetValue("conversation.result", resourcesAsStr);
+            _inputProcessor.resetCurrEmb();
             return await dc.EndDialogAsync();
         }
 
@@ -255,30 +277,42 @@ namespace MHBot
             };
         }
 
-        private static Recognizer CreateCrossTrainedRecognizer(IConfiguration configuration)
+        private static TextAnalyticsClient GetTextAnalyticsClient(IConfiguration configuration)
+        {
+            if (string.IsNullOrEmpty(configuration["textanalytics:Endpoint"]) || string.IsNullOrEmpty(configuration["textanalytics:APIKey"]))
+            {
+                throw new Exception("NOTE: TextAnalytics is not configured. Check the appsettings.json file.");
+            }
+
+            return new TextAnalyticsClient(
+                new Uri(configuration["textanalytics:Endpoint"]),
+                new AzureKeyCredential(configuration["textanalytics:APIKey"])
+            );
+        }
+        private static Recognizer GetCrossTrainedRecognizer(IConfiguration configuration)
         {
             return new CrossTrainedRecognizerSet()
             {
                 Recognizers = new List<Recognizer>()
                 {
-                    CreateLuisRecognizer(configuration),
-                    // GetQnARecognizer(configuration)
+                    GetLuisRecognizer(configuration),
+                    GetQnARecognizer(configuration)
                 }
             };
         }
 
-        private static Recognizer CreateLuisRecognizer(IConfiguration configuration)
+        private static Recognizer GetLuisRecognizer(IConfiguration configuration)
         {
-            if (string.IsNullOrEmpty(configuration["LuisAppId"]) || string.IsNullOrEmpty(configuration["LuisAPIKey"]) || string.IsNullOrEmpty(configuration["LuisAPIHostName"]))
+            if (string.IsNullOrEmpty(configuration["luis:AppId"]) || string.IsNullOrEmpty(configuration["luis:APIKey"]) || string.IsNullOrEmpty(configuration["luis:APIHostName"]))
             {
-                throw new Exception("NOTE: LUIS is not configured. To enable all capabilities, add 'LuisAppId', 'LuisAPIKey' and 'LuisAPIHostName' to the appsettings.json file.");
+                throw new Exception("NOTE: LUIS is not configured. Check the appsettings.json file.");
             }
 
             return new LuisAdaptiveRecognizer()
             {
-                ApplicationId = configuration["LuisAppId"],
-                EndpointKey = configuration["LuisAPIKey"],
-                Endpoint = configuration["LuisAPIHostName"],
+                ApplicationId = configuration["luis:AppId"],
+                EndpointKey = configuration["luis:APIKey"],
+                Endpoint = configuration["luis:APIHostName"],
 
                 // Id needs to be LUIS_<dialogName> for cross-trained recognizer to work.
                 Id = $"LUIS_{nameof(RootDialog)}"
@@ -286,16 +320,16 @@ namespace MHBot
         }
         private static Recognizer GetQnARecognizer(IConfiguration configuration)
         {
-            if (string.IsNullOrEmpty(configuration["QnAKnowledgeBaseId"]) || string.IsNullOrEmpty(configuration["QnAHostName"]) || string.IsNullOrEmpty(configuration["QnAEndpointKey"]))
+            if (string.IsNullOrEmpty(configuration["qna:KnowledgeBaseId"]) || string.IsNullOrEmpty(configuration["qna:HostName"]) || string.IsNullOrEmpty(configuration["qna:EndpointKey"]))
             {
                 throw new Exception("NOTE: QnA Maker is not configured for RootDialog. Check the appsettings.json file.");
             }
 
             var recognizer = new QnAMakerRecognizer()
             {
-                HostName = configuration["QnAHostName"],
-                EndpointKey = configuration["QnAEndpointKey"],
-                KnowledgeBaseId = configuration["QnAKnowledgeBaseId"],
+                HostName = configuration["qna:HostName"],
+                EndpointKey = configuration["qna:EndpointKey"],
+                KnowledgeBaseId = configuration["qna:KnowledgeBaseId"],
 
                 // property path that holds qna context
                 Context = "dialog.qnaContext",
@@ -306,8 +340,8 @@ namespace MHBot
                 // Disable teletry logging
                 LogPersonalInformation = false,
 
-                // Enable to automatically including dialog name as meta data filter on calls to QnA Maker.
-                IncludeDialogNameInMetadata = true,
+                // Disable to automatically including dialog name as meta data filter on calls to QnA Maker.
+                IncludeDialogNameInMetadata = false,
 
                 // Id needs to be QnA_<dialogName> for cross-trained recognizer to work.
                 Id = $"QnA_{nameof(RootDialog)}"
