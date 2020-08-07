@@ -10,6 +10,7 @@ import argparse
 import os
 import pandas as pd
 import scipy.spatial as spatial
+from scipy.spatial import cKDTree
 
 import numpy as np
 torch.manual_seed(0)
@@ -33,35 +34,40 @@ class vocab():
         self.gv=gv
 
     def expand(self, breadth, depth):
+        tree=cKDTree(self.gv.vectors)
         for i in range(depth):
-            for j in self.not_checked:
-                new_not_checked = {}
-                distances=np.array([spatial.distance.euclidean(k, self.not_checked[j]) for k in self.gv.vectors])
+            query=torch.stack(tuple(self.not_checked.values()), dim=0)
+            dd, ii= tree.query(query, k=breadth)
+            new_not_checked={self.gv.itos[i]: self.gv.vectors[i] for i in np.unique(ii.flatten())}
+            self.all_words={**new_not_checked, **self.all_words}
+            self.not_checked=new_not_checked
 
-                mask=distances.argsort()[:breadth]
-                temp={self.gv.itos[k]: self.gv.vectors[k] for k in mask if self.gv.itos[k] not in self.all_words}
-
-                new_not_checked={**new_not_checked, **temp}
-            self.not_checked=new_not_checked.copy()
-            self.all_words={**self.all_words, **new_not_checked}
 
 def main(args):
 
-    ######
-    # 3.2 Processing of the data
-    # the code below assumes you have processed and split the data into
-    # the three files, train.tsv, validation.tsv and test.tsv
-    # and those files reside in the folder named "data".
-    ######
     chat=["feminine", "feminist"]
-    # 3.2.1
-
-    # 4.1
     gv=torchtext.vocab.GloVe(name='6B', dim=100)
-    f = open("Data/Tags.txt", "r")
-    tag_list=f.read().lower().split()
-    new_corpus=vocab(tag_list, gv)
-    new_corpus.expand(5,2)
+
+    other_words = ["african", "liberty", "death", "die", "family", "gay", "lesbian", "international"]
+    w = {word: gv.vectors[gv.stoi[word]].numpy() for word in other_words}
+    new_corp = pd.DataFrame.from_dict(w, orient='index')
+    new_corp.to_csv('Data/new_corpus.csv', header=None, index=True, sep=' ', mode='a')
+    with open("Data/New_Corpus_Words.txt", 'a') as f:
+        for t in other_words:
+            f.write(t + '\n ')
+
+
+    # with open("Data/Tags.txt", "r") as f:
+    #     tag_list=f.read().lower().split()
+    #
+    # new_corpus=vocab(tag_list, gv)
+    # new_corpus.expand(7,3)
+    # new_corp={i : new_corpus.all_words[i].numpy() for i in new_corpus.all_words}
+    # new_corp= pd.DataFrame.from_dict(new_corp, orient='index')
+    # new_corp.to_csv('Data/new_corpus2.csv', header=None,index=True, sep=' ', mode='w')
+    # with open("Data/New_Tags2.txt", 'w') as f:
+    #     for t in new_corpus.all_words.keys():
+    #         f.write(t+'\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
