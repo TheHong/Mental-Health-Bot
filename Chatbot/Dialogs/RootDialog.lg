@@ -43,7 +43,7 @@
 - Dis is conversational
 
 # UnknownIntent
-- Dis is unknown intentional
+- My bad, I didn't understand that. Could you try again?
 
 # ResourceIntent
 - Let me redirect you to some resources.
@@ -79,4 +79,5 @@
 - ELSE:
     - Sorry, I don't speak ${conversation.currLanguage}.
 
-
+# Debug
+- LUIS (${dialog.luisResult.score}) and QnA(${dialog.qnaResult.score})

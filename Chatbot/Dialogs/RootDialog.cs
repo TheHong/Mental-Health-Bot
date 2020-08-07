@@ -112,14 +112,6 @@ namespace MHBot
                             new SendActivity("${ConversationIntent()}") // TODO: Replace with QnA
                         }
                     },
-                    new OnUnknownIntent()
-                    {
-                        Actions = new List<Dialog>() {
-                            new CodeAction(DetectLanguage),
-                            new EmitEvent("Language Change"),
-                            new SendActivity("${UnknownIntent()}"),
-                        }
-                    },
                     new OnIntent()
                     {
                         Intent = "Resource",
@@ -163,8 +155,99 @@ namespace MHBot
                             new SendActivity("${DisplayResources()}"),
                             new EndDialog(),
                         }
-                    }
-            }
+                    },
+                    // This trigger fires when the recognizers do not agree on who should win.
+                    new OnChooseIntent()
+                    {
+                        Actions = new List<Dialog>()
+                        {
+                            // Do language detection feature
+                            new CodeAction(DetectLanguage),
+                            new EmitEvent("Language Change"),
+
+                            // Get the confidence scores from both LUIS and QnA
+                            new SetProperties()
+                            {
+                                Assignments = new List<PropertyAssignment>()
+                                {
+                                    new PropertyAssignment()
+                                    {
+                                        Property = "dialog.luisResult",
+                                        Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'LUIS_{nameof(RootDialog)}')]\")"
+                                    },
+                                    new PropertyAssignment()
+                                    {
+                                        Property = "dialog.qnaResult",
+                                        Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'QnA_{nameof(RootDialog)}')]\")"
+                                    },
+                                }
+                            },
+                            new SendActivity("${Debug()}"),
+
+                            // Rules to determine winner before disambiguation
+                            // Rule 1: If QnA is fairly confident and is more confident than LUIS, then QnA it is
+                            new IfCondition()
+                            {
+                                Condition = "dialog.qnaResult.score > dialog.luisResult.score && dialog.qnaResult.score > 0.75",
+                                Actions = new List<Dialog>()
+                                {
+                                    // By Emitting a recognized intent event with the recognition result from LUIS, adaptive dialog
+                                    // will evaluate all triggers with that recognition result.
+                                    new EmitEvent()
+                                    {
+                                        EventName = AdaptiveEvents.RecognizedIntent,
+                                        EventValue = "=dialog.qnaResult.result"
+                                    },
+                                    new BreakLoop()
+                                }
+                            },
+                            // Rule 2: If the other way around
+                            new IfCondition()
+                            {
+                                Condition = "dialog.luisResult.score > 0.6",
+                                Actions = new List<Dialog>()
+                                {
+                                    new EmitEvent()
+                                    {
+                                        EventName = AdaptiveEvents.RecognizedIntent,
+                                        EventValue = "=dialog.luisResult.result"
+                                    },
+                                    new BreakLoop()
+                                }
+                            },
+
+                            // Rule 3: If none works
+                            new SendActivity("${UnknownIntent()}")
+                        },
+                    },
+                    // new OnUnknownIntent()
+                    // {
+                    //     Actions = new List<Dialog>() {
+                    //         new CodeAction(DetectLanguage),
+                    //         new EmitEvent("Language Change"),
+                    //         //DEBUG
+                    //         new SetProperties()
+                    //         {
+                    //             Assignments = new List<PropertyAssignment>()
+                    //             {
+                    //                 // Get the recognition result values for each recognizer configured on this dialog by ID.
+                    //                 new PropertyAssignment()
+                    //                 {
+                    //                     Property = "dialog.luisResult",
+                    //                     Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'LUIS_{nameof(RootDialog)}')]\")"
+                    //                 },
+                    //                 new PropertyAssignment()
+                    //                 {
+                    //                     Property = "dialog.qnaResult",
+                    //                     Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'QnA_{nameof(RootDialog)}')]\")"
+                    //                 },
+                    //             }
+                    //         },
+                    //         new SendActivity("${Debug()}"),
+                    //         // new SendActivity("${UnknownIntent()}"),
+                    //     }
+                    // }
+                }
             };
 
             // Add named dialogs to the DialogSet. These names are saved in the dialog state.
@@ -197,15 +280,16 @@ namespace MHBot
             var keywords = dc.State.GetValue("conversation.keywords", () => new string[0]);
             string resourcesAsStr;
 
-            // TODO: INSERT KEYWORDS->TAGS->RESOURCES CODE HERE
-            Console.WriteLine(string.Join(", ", keywords));
+            // Displaying results -------
+            Console.WriteLine($"> Keywords are: [{string.Join(", ", keywords)}]");
             List<List<WordProb>> tags = _inputProcessor.GetTags(keywords);
-            Console.WriteLine("Got {0}", tags);
+            Console.WriteLine("> Tags are as follows:");
             foreach (List<WordProb> wpL in tags)
             {
+                Console.WriteLine(" ");
                 foreach (WordProb wp in wpL)
                 {
-                    Console.WriteLine(wp.ToStr());
+                    Console.WriteLine($"->{wp.ToStr()}");
                 }
             }
             List<Resource> resources = _inputProcessor.GetResources(tags);
@@ -216,11 +300,6 @@ namespace MHBot
                 resourceStrings.Add(r.ToStr());
             }
             resourcesAsStr = string.Join("\n", resourceStrings);
-            ///////////////////////////////////
-
-            // TODO: Delete this, as this will be temprorary
-            // resourcesAsStr = string.Join(", ", keywords);
-            /////////////////////////////////////////
 
             dc.State.SetValue("conversation.result", resourcesAsStr);
             _inputProcessor.resetCurrEmb();
@@ -295,8 +374,8 @@ namespace MHBot
             {
                 Recognizers = new List<Recognizer>()
                 {
-                    GetLuisRecognizer(configuration),
-                    GetQnARecognizer(configuration)
+                    GetQnARecognizer(configuration),
+                    GetLuisRecognizer(configuration)
                 }
             };
         }
