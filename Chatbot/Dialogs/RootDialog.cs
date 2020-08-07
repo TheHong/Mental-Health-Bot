@@ -40,10 +40,7 @@ namespace MHBot
         {
             Configuration = configuration;
             _templates = Templates.ParseFile(Path.Combine(".", "Dialogs", "RootDialog.lg"));
-            _textAnalyticsClient = new TextAnalyticsClient(
-                new Uri(configuration["TextAnalyticsEndpoint"]),
-                new AzureKeyCredential(configuration["TextAnalyticsAPIKey"])
-            );
+            _textAnalyticsClient = GetTextAnalyticsClient(configuration);
             _inputProcessor = new InputProcessing();
             _inputProcessor.load_resources("Data/UofT Mental Health Resources.txt");
 
@@ -55,7 +52,7 @@ namespace MHBot
                 // This dialog will react to user input using its own Recognizer's output and Rules.
 
                 // Add a recognizer to the adaptive dialog.
-                Recognizer = CreateCrossTrainedRecognizer(configuration),
+                Recognizer = GetCrossTrainedRecognizer(configuration),
 
                 // Add rules to respond to different events of interest
                 Generator = new TemplateEngineLanguageGenerator(_templates),
@@ -203,11 +200,11 @@ namespace MHBot
 
             // TODO: INSERT KEYWORDS->TAGS->RESOURCES CODE HERE
             Console.WriteLine(string.Join(", ", keywords));
-            List<List<Word_Prob>> tags = _inputProcessor.GetTags(keywords);
+            List<List<WordProb>> tags = _inputProcessor.GetTags(keywords);
             Console.WriteLine("Got {0}", tags);
-            foreach (List<Word_Prob> wpL in tags)
+            foreach (List<WordProb> wpL in tags)
             {
-                foreach (Word_Prob wp in wpL)
+                foreach (WordProb wp in wpL)
                 {
                     Console.WriteLine(wp.ToStr());
                 }
@@ -281,30 +278,42 @@ namespace MHBot
             };
         }
 
-        private static Recognizer CreateCrossTrainedRecognizer(IConfiguration configuration)
+        private static TextAnalyticsClient GetTextAnalyticsClient(IConfiguration configuration)
+        {
+            if (string.IsNullOrEmpty(configuration["textanalytics:Endpoint"]) || string.IsNullOrEmpty(configuration["textanalytics:APIKey"]))
+            {
+                throw new Exception("NOTE: TextAnalytics is not configured. Check the appsettings.json file.");
+            }
+
+            return new TextAnalyticsClient(
+                new Uri(configuration["textanalytics:Endpoint"]),
+                new AzureKeyCredential(configuration["textanalytics:APIKey"])
+            );
+        }
+        private static Recognizer GetCrossTrainedRecognizer(IConfiguration configuration)
         {
             return new CrossTrainedRecognizerSet()
             {
                 Recognizers = new List<Recognizer>()
                 {
-                    CreateLuisRecognizer(configuration),
-                    // GetQnARecognizer(configuration)
+                    GetLuisRecognizer(configuration),
+                    GetQnARecognizer(configuration)
                 }
             };
         }
 
-        private static Recognizer CreateLuisRecognizer(IConfiguration configuration)
+        private static Recognizer GetLuisRecognizer(IConfiguration configuration)
         {
-            if (string.IsNullOrEmpty(configuration["LuisAppId"]) || string.IsNullOrEmpty(configuration["LuisAPIKey"]) || string.IsNullOrEmpty(configuration["LuisAPIHostName"]))
+            if (string.IsNullOrEmpty(configuration["luis:AppId"]) || string.IsNullOrEmpty(configuration["luis:APIKey"]) || string.IsNullOrEmpty(configuration["luis:APIHostName"]))
             {
-                throw new Exception("NOTE: LUIS is not configured. To enable all capabilities, add 'LuisAppId', 'LuisAPIKey' and 'LuisAPIHostName' to the appsettings.json file.");
+                throw new Exception("NOTE: LUIS is not configured. Check the appsettings.json file.");
             }
 
             return new LuisAdaptiveRecognizer()
             {
-                ApplicationId = configuration["LuisAppId"],
-                EndpointKey = configuration["LuisAPIKey"],
-                Endpoint = configuration["LuisAPIHostName"],
+                ApplicationId = configuration["luis:AppId"],
+                EndpointKey = configuration["luis:APIKey"],
+                Endpoint = configuration["luis:APIHostName"],
 
                 // Id needs to be LUIS_<dialogName> for cross-trained recognizer to work.
                 Id = $"LUIS_{nameof(RootDialog)}"
@@ -312,16 +321,16 @@ namespace MHBot
         }
         private static Recognizer GetQnARecognizer(IConfiguration configuration)
         {
-            if (string.IsNullOrEmpty(configuration["QnAKnowledgeBaseId"]) || string.IsNullOrEmpty(configuration["QnAHostName"]) || string.IsNullOrEmpty(configuration["QnAEndpointKey"]))
+            if (string.IsNullOrEmpty(configuration["qna:KnowledgeBaseId"]) || string.IsNullOrEmpty(configuration["qna:HostName"]) || string.IsNullOrEmpty(configuration["qna:EndpointKey"]))
             {
                 throw new Exception("NOTE: QnA Maker is not configured for RootDialog. Check the appsettings.json file.");
             }
 
             var recognizer = new QnAMakerRecognizer()
             {
-                HostName = configuration["QnAHostName"],
-                EndpointKey = configuration["QnAEndpointKey"],
-                KnowledgeBaseId = configuration["QnAKnowledgeBaseId"],
+                HostName = configuration["qna:HostName"],
+                EndpointKey = configuration["qna:EndpointKey"],
+                KnowledgeBaseId = configuration["qna:KnowledgeBaseId"],
 
                 // property path that holds qna context
                 Context = "dialog.qnaContext",
@@ -332,8 +341,8 @@ namespace MHBot
                 // Disable teletry logging
                 LogPersonalInformation = false,
 
-                // Enable to automatically including dialog name as meta data filter on calls to QnA Maker.
-                IncludeDialogNameInMetadata = true,
+                // Disable to automatically including dialog name as meta data filter on calls to QnA Maker.
+                IncludeDialogNameInMetadata = false,
 
                 // Id needs to be QnA_<dialogName> for cross-trained recognizer to work.
                 Id = $"QnA_{nameof(RootDialog)}"
