@@ -9,12 +9,12 @@ namespace MyEchoBot
 
         public string ToStr()
         {
-            string[] info = [
+            string[] infoList = {
                 title.ToUpper() + "\n\n",
                 info + "\n",
                 $"You can find more info at {link}"
-            ];
-            return string.Join(info);
+            };
+            return string.Join("", infoList);
         }
     }
 
