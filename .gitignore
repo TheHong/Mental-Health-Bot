@@ -1,5 +1,4 @@
+.vector_cache
 .idea
-.vscode
-bin
-obj
-*.csproj
+userInfo.js
+appsettings.json

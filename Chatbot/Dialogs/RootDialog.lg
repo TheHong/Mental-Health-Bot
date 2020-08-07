@@ -1,0 +1,82 @@
+﻿> Language Generation definition file. 
+> Prebuilt functions: https://docs.microsoft.com/en-us/azure/bot-service/adaptive-expressions/adaptive-expressions-prebuilt-functions?view=azure-bot-service-4.0
+
+> Some meta =============================================
+# Location
+- University of Toronto
+
+
+> Welcome Card ==============================================
+# WelcomeCard
+[Activity
+    Attachments = ${json(AdaptiveCard.Definition())}
+]
+
+# AdaptiveCard.Definition
+- ${fromFile('./welcomecard.json')}
+
+# WelcomeCardTitle
+- Hi, my name is Felix!
+- Hello, my name is Felix!
+
+# WelcomeCardBody
+- ${WelcomeCardBodyP1()} ${WelcomeCardBodyP2()} ${WelcomeCardBodyP3()} ${WelcomeCardBodyP4()}
+
+# WelcomeCardBodyP1
+- I am a chatbot designed to talk to you about mental health resources available at the ${Location()}.
+
+# WelcomeCardBodyP2
+- As a chatbot, I am not human. As a result, please note that however human-like my responses may be, my conversation skills are still limited.
+
+# WelcomeCardBodyP3
+- At any time you have the option to speak with a human operator.
+
+# WelcomeCardBodyP4
+- You may now type something are click on one of the following options to get started.
+
+
+> Dealing with intents ==============================================
+# UrgentIntent
+- Call 911
+
+# ConversationIntent
+- Dis is conversational
+
+# UnknownIntent
+- Dis is unknown intentional
+
+# ResourceIntent
+- Let me redirect you to some resources.
+- I'm going to provide some resources that may be of help.
+
+# MoreInfoPrompt
+- I would love learn more. Can you tell me more about what's happening?
+- Could you tell me briefly about the situation so I can help you better?
+
+# AskForMoreInfo
+- Great. Please let me know what's on your mind before I get some resources for you.
+- That's amazing. I am listening.
+
+# EndMoreInfo
+- Thank you for telling me that.
+- Thank you for letting me know.
+
+# EndInfo
+- I will now get resources for you.
+- Let me get the resources. I'll be back in a sec.
+
+# DisplayResources
+- Here's I found for you: ${conversation.result}
+- Here's what I got: ${conversation.result}
+
+# ShowLanguageSample
+- IF: ${conversation.currLanguage == "Chinese_Traditional" || conversation.currLanguage == "Chinese_Simplified"}
+    - 你好，我亦可以用中文来交通！
+    - 你想用中文来交通？没问题。除了英文，我也会中文！
+- ELSEIF: ${conversation.currLanguage == "French"}
+    - Bonjour! Je suis Felix et je peux aussi parler le français!
+    - Vous parlez le français? Je communiquerai en français. Quoi puis-je vous aider?
+- ELSE:
+    - Sorry, I don't speak ${conversation.currLanguage}.
+
+
