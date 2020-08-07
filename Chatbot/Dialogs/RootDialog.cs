@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Microsoft.Bot.Builder.AI.Luis;
+using Microsoft.Bot.Builder.AI.QnA.Recognizers;
+using Microsoft.Bot.Builder.Dialogs.Adaptive.Recognizers;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Dialogs.Adaptive;
 using Microsoft.Bot.Builder.Dialogs.Adaptive.Input;
@@ -45,7 +47,7 @@ namespace MHBot
                 // This dialog will react to user input using its own Recognizer's output and Rules.
 
                 // Add a recognizer to the adaptive dialog.
-                Recognizer = CreateRecognizer(configuration),
+                Recognizer = CreateCrossTrainedRecognizer(configuration),
 
                 // Add rules to respond to different events of interest
                 Generator = new TemplateEngineLanguageGenerator(_templates),
@@ -56,9 +58,23 @@ namespace MHBot
                     {
                         Actions = WelcomeUserSteps()
                     },
+
+                    // With QnA Maker set as a recognizer on a dialog, you can use the OnQnAMatch trigger to render the answer.
+                    new OnQnAMatch()
+                    {
+                        Actions = new List<Dialog>()
+                        {
+                            new SendActivity()
+                            {
+                                Activity = new ActivityTemplate("${@answer}"),
+                            }
+                        }
+                    },
+
                     // The intents here are based on intents defined in RootDialog.LU file
                     // (however, the .lu file is just for reference and the main functionality come from the LUIS resource)
                     //TODO: Add .lu file for completion
+                    
                     new OnDialogEvent(){
                         // Language change is just for demo purposes. 
                         // In future, can use translate to translate foreign languages to English before using LUIS
@@ -163,7 +179,8 @@ namespace MHBot
         {
             string incomingText = dc.State.GetValue("turn.activity.text", () => "");
             DetectedLanguage language = _textAnalyticsClient.DetectLanguage(incomingText);
-            if (language.ConfidenceScore > 0.8){
+            if (language.ConfidenceScore > 0.8)
+            {
                 dc.State.SetValue("conversation.currLanguage", language.Name);
             }
             Console.WriteLine($"Detected language {language.Name} with confidence score {language.ConfidenceScore}.");
@@ -238,7 +255,19 @@ namespace MHBot
             };
         }
 
-        private static Recognizer CreateRecognizer(IConfiguration configuration)
+        private static Recognizer CreateCrossTrainedRecognizer(IConfiguration configuration)
+        {
+            return new CrossTrainedRecognizerSet()
+            {
+                Recognizers = new List<Recognizer>()
+                {
+                    // CreateLuisRecognizer(configuration),
+                    GetQnARecognizer(configuration)
+                }
+            };
+        }
+
+        private static Recognizer CreateLuisRecognizer(IConfiguration configuration)
         {
             if (string.IsNullOrEmpty(configuration["LuisAppId"]) || string.IsNullOrEmpty(configuration["LuisAPIKey"]) || string.IsNullOrEmpty(configuration["LuisAPIHostName"]))
             {
@@ -249,8 +278,43 @@ namespace MHBot
             {
                 ApplicationId = configuration["LuisAppId"],
                 EndpointKey = configuration["LuisAPIKey"],
-                Endpoint = configuration["LuisAPIHostName"]
+                Endpoint = configuration["LuisAPIHostName"],
+
+                // Id needs to be LUIS_<dialogName> for cross-trained recognizer to work.
+                Id = $"LUIS_{nameof(RootDialog)}"
             };
         }
+        private static Recognizer GetQnARecognizer(IConfiguration configuration)
+        {
+            if (string.IsNullOrEmpty(configuration["QnAKnowledgeBaseId"]) || string.IsNullOrEmpty(configuration["QnAHostName"]) || string.IsNullOrEmpty(configuration["QnAEndpointKey"]))
+            {
+                throw new Exception("NOTE: QnA Maker is not configured for RootDialog. Check the appsettings.json file.");
+            }
+
+            var recognizer = new QnAMakerRecognizer()
+            {
+                HostName = configuration["QnAHostName"],
+                EndpointKey = configuration["QnAEndpointKey"],
+                KnowledgeBaseId = configuration["QnAKnowledgeBaseId"],
+
+                // property path that holds qna context
+                Context = "dialog.qnaContext",
+
+                // Property path where previous qna id is set. This is required to have multi-turn QnA working.
+                QnAId = "turn.qnaIdFromPrompt",
+
+                // Disable teletry logging
+                LogPersonalInformation = false,
+
+                // Enable to automatically including dialog name as meta data filter on calls to QnA Maker.
+                IncludeDialogNameInMetadata = true,
+
+                // Id needs to be QnA_<dialogName> for cross-trained recognizer to work.
+                Id = $"QnA_{nameof(RootDialog)}"
+            };
+
+            return recognizer;
+        }
+
     }
 }
