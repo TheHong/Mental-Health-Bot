@@ -21,6 +21,9 @@ using System.Threading.Tasks;
 using Azure.AI.TextAnalytics;
 using Azure;
 
+
+using wordVecDistance;
+
 namespace MHBot
 {
     public class RootDialog : ComponentDialog
@@ -29,6 +32,8 @@ namespace MHBot
         private Templates _templates;
 
         private static TextAnalyticsClient _textAnalyticsClient;
+
+        private static InputProcessing _inputProcessor;
 
         public RootDialog(IConfiguration configuration)
            : base(nameof(RootDialog))
@@ -39,6 +44,9 @@ namespace MHBot
                 new Uri(configuration["TextAnalyticsEndpoint"]),
                 new AzureKeyCredential(configuration["TextAnalyticsAPIKey"])
             );
+            _inputProcessor = new InputProcessing();
+            _inputProcessor.load_resources("Data/UofT Mental Health Resources.txt");
+
 
             // Create instance of adaptive dialog. 
             var rootDialog = new AdaptiveDialog(nameof(AdaptiveDialog))
@@ -194,14 +202,32 @@ namespace MHBot
             string resourcesAsStr;
 
             // TODO: INSERT KEYWORDS->TAGS->RESOURCES CODE HERE
-            // ...
+            Console.WriteLine(string.Join(", ", keywords));
+            List<List<Word_Prob>> tags = _inputProcessor.GetTags(keywords);
+            Console.WriteLine("Got {0}", tags);
+            foreach (List<Word_Prob> wpL in tags)
+            {
+                foreach (Word_Prob wp in wpL)
+                {
+                    Console.WriteLine(wp.ToStr());
+                }
+            }
+            List<Resource> resources = _inputProcessor.GetResources(tags);
+            Console.WriteLine("Got resources");
+            List<string> resourceStrings = new List<string>();
+            foreach (Resource r in resources)
+            {
+                resourceStrings.Add(r.ToStr());
+            }
+            resourcesAsStr = string.Join("\n", resourceStrings);
             ///////////////////////////////////
 
             // TODO: Delete this, as this will be temprorary
-            resourcesAsStr = string.Join(", ", keywords);
+            // resourcesAsStr = string.Join(", ", keywords);
             /////////////////////////////////////////
 
             dc.State.SetValue("conversation.result", resourcesAsStr);
+            _inputProcessor.resetCurrEmb();
             return await dc.EndDialogAsync();
         }
 

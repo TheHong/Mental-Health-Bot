@@ -7,7 +7,6 @@ namespace wordVecDistance{
   static class globals{
     public static string GV_PATH="Data/new_corpus.csv";
     public static string TAG_PATH="Data/Tags.txt";
-    public static string KEY_WORDS_PATH="Data/Key_words.txt"; //TODO: connect it directly to Luis
     
     public static char[] DELIM={ ' ', '\t', '\n', '\r'};
     public static char[] DELIM2={ ' ', ',', '"', '\t', '\n', '\r'};
@@ -36,14 +35,12 @@ namespace wordVecDistance{
   public class Word_Prob{
     public string word;
     public double prob;
-    public void print(){
-      Console.WriteLine("{0} : {1}", this.word, this.prob);
+    public string ToStr(){
+      return $"({this.word}, {this.prob})";
     }
+
   }
-  class Embedding{//TODO: change some of the types (arrays->list)
-    
-
-
+  class Embedding{
     public Dictionary<string, int> stoi = new Dictionary<string, int>();
     public int num_ex;
     public int emb_size=-1; //-1 means unassigned
@@ -123,6 +120,14 @@ namespace wordVecDistance{
 
       }
       return all_tags;
+    }
+
+    public void reset(){
+      stoi.Clear();
+      num_ex = 0;
+      emb_size=-1; //-1 means unassigned
+      itos.Clear();
+      vectors.Clear();
     }
 
   }
