@@ -37,13 +37,26 @@
 
 > Dealing with intents ==============================================
 # UrgentIntent
-- Call 911
+- Please call 911. Campus police can also be found at 416-978-2222 (St. George and Scarborough) and 905-569-4333 (Mississauga).
 
-# ConversationIntent
-- Dis is conversational
+# UrgentIntentFollowUp
+- If you want, you could speak to one of us directly. Would you like that?
 
 # UnknownIntent
-- My bad, I didn't understand that. Could you try again?
+- ${Apologize()}, I didn't understand that. Could you try again?
+
+# HandoffIntent
+- Okay, please hold on. I'm transferring this conversation to a person.
+
+# HandoffIntentCancel
+- Okay, I'm still here for you.
+
+# Apologize
+- Sorry
+- My bad
+- Excuse me
+- Pardon me
+- I'm sorry
 
 # ResourceIntent
 - Let me redirect you to some resources.
@@ -79,5 +92,5 @@
 - ELSE:
     - Sorry, I don't speak ${conversation.currLanguage}.
 
-# Debug
+# ShowConfidence
 - LUIS (${dialog.luisResult.score}) and QnA(${dialog.qnaResult.score})

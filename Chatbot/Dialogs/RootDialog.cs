@@ -57,13 +57,13 @@ namespace MHBot
                 Generator = new TemplateEngineLanguageGenerator(_templates),
                 Triggers = new List<OnCondition>()
                 {
-                    // Add a rule to welcome user
+                    // STARTING ===============================================
                     new OnConversationUpdateActivity()
                     {
                         Actions = WelcomeUserSteps()
                     },
 
-                    // With QnA Maker set as a recognizer on a dialog, you can use the OnQnAMatch trigger to render the answer.
+                    // QnA RESPONSE ===========================================
                     new OnQnAMatch()
                     {
                         Actions = new List<Dialog>()
@@ -75,14 +75,11 @@ namespace MHBot
                         }
                     },
 
-                    // The intents here are based on intents defined in RootDialog.LU file
-                    // (however, the .lu file is just for reference and the main functionality come from the LUIS resource)
-                    //TODO: Add .lu file for completion
-                    
+                    // LANGUAGE DETECTION DEMO ================================
+                    // Language change is just for demo purposes. 
+                    // In future, can use translate to translate foreign languages to English before using LUIS
+                    // Of course, the more nuanced approach would be to have a knowledge base for each language
                     new OnDialogEvent(){
-                        // Language change is just for demo purposes. 
-                        // In future, can use translate to translate foreign languages to English before using LUIS
-                        // Of course, the more nuanced approach would be to have a knowledge base for each language
                         Event = "Language Change",
                         Condition = "conversation.currLanguage != conversation.prevLanguage",
                         Actions = new List<Dialog> ()
@@ -92,26 +89,53 @@ namespace MHBot
                             new EndDialog(),
                         }
                     },
+
+                    // LUIS - - - - - - -
+                    // The intents here are based on intents defined in RootDialog.LU file
+                    // (however, the .lu file is just for reference and the main functionality come from the LUIS resource)
+                    //TODO: Add .lu and .lg file for completion
+
+                    // INTENT:URGENT ==========================================
                     new OnIntent()
                     {
                         Intent = "Urgent",
                         Condition = "#Urgent.Score >= 0.6",
                         Actions = new List<Dialog> ()
                         {
-                            new SendActivity("${UrgentIntent()}")
+                            new SendActivity("${UrgentIntent()}"),
+                            new ConfirmInput()
+                            {
+                                Prompt = new ActivityTemplate("${UrgentIntentFollowUp()}"),
+                                Property = "turn.handoff",
+                                AllowInterruptions = "false"
+                            },
+                            new IfCondition()
+                            {
+                                Condition = "turn.handoff == true",
+                                Actions = new List<Dialog>()
+                                {
+                                    new SendActivity("${HandoffIntent()}")
+                                },
+                                ElseActions = new List<Dialog>()
+                                {
+                                    new SendActivity("${HandoffIntentCancel()}")
+                                },
+                            },
                         }
                     },
+
+                    // INTENT:HANDOFF =========================================
                     new OnIntent()
                     {
-                        Intent = "Conversation",
-                        Condition = "#Conversation.Score >= 0.6",
+                        Intent = "Handoff",
+                        Condition = "#Handoff.Score >= 0.6",
                         Actions = new List<Dialog> ()
                         {
-                            new CodeAction(DetectLanguage),
-                            new EmitEvent("Language Change"),
-                            new SendActivity("${ConversationIntent()}") // TODO: Replace with QnA
+                            new SendActivity("${HandoffIntent()}"),
                         }
                     },
+
+                    // INTENT:RESOURCE ========================================
                     new OnIntent()
                     {
                         Intent = "Resource",
@@ -156,7 +180,8 @@ namespace MHBot
                             new EndDialog(),
                         }
                     },
-                    // This trigger fires when the recognizers do not agree on who should win.
+
+                    // QnA vs. LUIS ===========================================
                     new OnChooseIntent()
                     {
                         Actions = new List<Dialog>()
@@ -182,9 +207,8 @@ namespace MHBot
                                     },
                                 }
                             },
-                            new SendActivity("${Debug()}"),
+                            // new SendActivity("${ShowConfidence()}"),
 
-                            // Rules to determine winner before disambiguation
                             // Rule 1: If QnA is fairly confident and is more confident than LUIS, then QnA it is
                             new IfCondition()
                             {
@@ -215,38 +239,10 @@ namespace MHBot
                                     new BreakLoop()
                                 }
                             },
-
-                            // Rule 3: If none works
+                            // Rule 3: If none works (acts as OnUnknownIntent)
                             new SendActivity("${UnknownIntent()}")
                         },
                     },
-                    // new OnUnknownIntent()
-                    // {
-                    //     Actions = new List<Dialog>() {
-                    //         new CodeAction(DetectLanguage),
-                    //         new EmitEvent("Language Change"),
-                    //         //DEBUG
-                    //         new SetProperties()
-                    //         {
-                    //             Assignments = new List<PropertyAssignment>()
-                    //             {
-                    //                 // Get the recognition result values for each recognizer configured on this dialog by ID.
-                    //                 new PropertyAssignment()
-                    //                 {
-                    //                     Property = "dialog.luisResult",
-                    //                     Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'LUIS_{nameof(RootDialog)}')]\")"
-                    //                 },
-                    //                 new PropertyAssignment()
-                    //                 {
-                    //                     Property = "dialog.qnaResult",
-                    //                     Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'QnA_{nameof(RootDialog)}')]\")"
-                    //                 },
-                    //             }
-                    //         },
-                    //         new SendActivity("${Debug()}"),
-                    //         // new SendActivity("${UnknownIntent()}"),
-                    //     }
-                    // }
                 }
             };
 
