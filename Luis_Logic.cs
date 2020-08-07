@@ -5,7 +5,7 @@ using Distance_Func;
 using System.Linq;
 namespace wordVecDistance{
   static class globals{
-    public static string GV_PATH=".vector_cache/glove.6B.100d.txt";
+    public static string GV_PATH="Data/new_corpus.csv";
     public static string TAG_PATH="Data/Tags.txt";
     public static string KEY_WORDS_PATH="Data/Key_words.txt"; //TODO: connect it directly to Luis
     

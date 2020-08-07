@@ -86,7 +86,7 @@ namespace MyEchoBot
     class Program{
         public static void Main(){
             InputProcessing test= new InputProcessing();
-            string [] key_words= new string[]{"feminine"};
+            string [] key_words= new string[]{"feminine", "die"};
 
             test.load_resources("Data/UofT Mental Health Resources.txt");
             List<List<Word_Prob>> tags=test.GetTags(key_words);
