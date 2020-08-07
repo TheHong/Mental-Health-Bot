@@ -21,8 +21,7 @@ using System.Threading.Tasks;
 using Azure.AI.TextAnalytics;
 using Azure;
 
-
-using wordVecDistance;
+using WordVectors;
 
 namespace MHBot
 {
