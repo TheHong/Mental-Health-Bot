@@ -1,6 +1,41 @@
 ﻿> Language Generation definition file. 
 > Prebuilt functions: https://docs.microsoft.com/en-us/azure/bot-service/adaptive-expressions/adaptive-expressions-prebuilt-functions?view=azure-bot-service-4.0
 
+> Some meta =============================================
+# Location
+- University of Toronto
+
+
+> Welcome Card ==============================================
+# WelcomeCard
+[Activity
+    Attachments = ${json(AdaptiveCard.Definition())}
+]
+
+# AdaptiveCard.Definition
+- ${fromFile('./welcomecard.json')}
+
+# WelcomeCardTitle
+- Hi, my name is Felix!
+- Hello, my name is Felix!
+
+# WelcomeCardBody
+- ${WelcomeCardBodyP1()} ${WelcomeCardBodyP2()} ${WelcomeCardBodyP3()} ${WelcomeCardBodyP4()}
+
+# WelcomeCardBodyP1
+- I am a chatbot designed to talk to you about mental health resources available at the ${Location()}.
+
+# WelcomeCardBodyP2
+- As a chatbot, I am not human. As a result, please note that however human-like my responses may be, my conversation skills are still limited.
+
+# WelcomeCardBodyP3
+- At any time you have the option to speak with a human operator.
+
+# WelcomeCardBodyP4
+- You may now type something are click on one of the following options to get started.
+
+
+> Dealing with intents ==============================================
 # UrgentIntent
 - Call 911
 

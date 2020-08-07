@@ -231,7 +231,7 @@ namespace MHBot
                             Condition = "$foreach.value.name != turn.activity.recipient.name",
                             Actions = new List<Dialog>()
                             {
-                                new SendActivity("Let's go") // To be replaced with welcome card
+                                new SendActivity("${WelcomeCard()}")
                             }
                         },
                         new SetProperties()
@@ -261,8 +261,8 @@ namespace MHBot
             {
                 Recognizers = new List<Recognizer>()
                 {
-                    // CreateLuisRecognizer(configuration),
-                    GetQnARecognizer(configuration)
+                    CreateLuisRecognizer(configuration),
+                    // GetQnARecognizer(configuration)
                 }
             };
         }
