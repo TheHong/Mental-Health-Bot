@@ -9,8 +9,11 @@ namespace MHBot
     public class Resource
     {
         public string title;
+        public string subtitle;
         public string link;
         public string info;
+
+        public string imageURL;
         public List<string> tags;
 
         public string ToStr()
