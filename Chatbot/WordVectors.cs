@@ -10,8 +10,7 @@ namespace WordVectors
         public static string GV_PATH = "Data/new_corpus.csv";
         public static string TAG_PATH = "Data/Tags.txt";
 
-        public static char[] DELIM = { ' ', '\t', '\n', '\r' };
-        public static char[] DELIM2 = { ' ', ',', '"', '\t', '\n', '\r' };
+        public static char[] DELIM = { ' ', ',', '"', '\t', '\n', '\r' };
         public static int MAX_TAGS = 3;
         public static int NUM_RESOURCES = 3;
         public static void SoftmaxNeg(double[] values)
@@ -63,7 +62,7 @@ namespace WordVectors
             this.emb_size = gv.emb_size;
             this.vectors = new List<List<double>>();
             // this.itos.ForEach(Console.WriteLine);
-            for (int i = 0; i < this.num_ex; i++)
+            for (int i = 0; i < this.num_ex; i++)//last one is empty
             {
                 this.stoi.Add(this.itos[i], i);
                 this.vectors.Add(gv.vectors[gv.stoi[this.itos[i]]]);

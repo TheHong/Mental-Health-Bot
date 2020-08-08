@@ -50,7 +50,7 @@ namespace MHBot
                 {
                     this.num_resources++;
                     string[] parts = line.Split('\t');
-                    string[] pos_tags = parts[1].Split(globals.DELIM2); //also remove punctuations             
+                    string[] pos_tags = parts[1].ToLower().Split(globals.DELIM); //also remove punctuations             
                     List<string> tags = new List<string>();
                     foreach (string word in pos_tags)
                     {
@@ -105,5 +105,7 @@ namespace MHBot
         public void resetCurrEmb(){
             key_words_emb.Reset();
         }
+        
     }
+    
 }

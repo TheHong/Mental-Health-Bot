@@ -41,7 +41,7 @@ namespace MHBot
             _templates = Templates.ParseFile(Path.Combine(".", "Dialogs", "RootDialog.lg"));
             _textAnalyticsClient = GetTextAnalyticsClient(configuration);
             _inputProcessor = new InputProcessing();
-            _inputProcessor.load_resources("Data/UofT Mental Health Resources.txt");
+            _inputProcessor.load_resources();
 
 
             // Create instance of adaptive dialog. 
