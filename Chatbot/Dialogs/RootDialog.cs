@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.AI.Luis;
 using Microsoft.Bot.Builder.AI.QnA.Recognizers;
 using Microsoft.Bot.Builder.Dialogs.Adaptive.Recognizers;
@@ -20,7 +21,7 @@ using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
 using Azure.AI.TextAnalytics;
 using Azure;
-
+using Microsoft.Bot.Schema;
 using WordVectors;
 
 namespace MHBot
@@ -57,13 +58,13 @@ namespace MHBot
                 Generator = new TemplateEngineLanguageGenerator(_templates),
                 Triggers = new List<OnCondition>()
                 {
-                    // Add a rule to welcome user
+                    // STARTING ===============================================
                     new OnConversationUpdateActivity()
                     {
                         Actions = WelcomeUserSteps()
                     },
 
-                    // With QnA Maker set as a recognizer on a dialog, you can use the OnQnAMatch trigger to render the answer.
+                    // QnA RESPONSE ===========================================
                     new OnQnAMatch()
                     {
                         Actions = new List<Dialog>()
@@ -75,14 +76,11 @@ namespace MHBot
                         }
                     },
 
-                    // The intents here are based on intents defined in RootDialog.LU file
-                    // (however, the .lu file is just for reference and the main functionality come from the LUIS resource)
-                    //TODO: Add .lu file for completion
-                    
+                    // LANGUAGE DETECTION DEMO ================================
+                    // Language change is just for demo purposes. 
+                    // In future, can use translate to translate foreign languages to English before using LUIS
+                    // Of course, the more nuanced approach would be to have a knowledge base for each language
                     new OnDialogEvent(){
-                        // Language change is just for demo purposes. 
-                        // In future, can use translate to translate foreign languages to English before using LUIS
-                        // Of course, the more nuanced approach would be to have a knowledge base for each language
                         Event = "Language Change",
                         Condition = "conversation.currLanguage != conversation.prevLanguage",
                         Actions = new List<Dialog> ()
@@ -92,34 +90,53 @@ namespace MHBot
                             new EndDialog(),
                         }
                     },
+
+                    // LUIS - - - - - - -
+                    // The intents here are based on intents defined in RootDialog.LU file
+                    // (however, the .lu file is just for reference and the main functionality come from the LUIS resource)
+                    //TODO: Add .lu and .lg file for completion
+
+                    // INTENT:URGENT ==========================================
                     new OnIntent()
                     {
                         Intent = "Urgent",
                         Condition = "#Urgent.Score >= 0.6",
                         Actions = new List<Dialog> ()
                         {
-                            new SendActivity("${UrgentIntent()}")
+                            new SendActivity("${UrgentIntent()}"),
+                            new ConfirmInput()
+                            {
+                                Prompt = new ActivityTemplate("${UrgentIntentFollowUp()}"),
+                                Property = "turn.handoff",
+                                AllowInterruptions = "false"
+                            },
+                            new IfCondition()
+                            {
+                                Condition = "turn.handoff == true",
+                                Actions = new List<Dialog>()
+                                {
+                                    new SendActivity("${HandoffIntent()}")
+                                },
+                                ElseActions = new List<Dialog>()
+                                {
+                                    new SendActivity("${HandoffIntentCancel()}")
+                                },
+                            },
                         }
                     },
+
+                    // INTENT:HANDOFF =========================================
                     new OnIntent()
                     {
-                        Intent = "Conversation",
-                        Condition = "#Conversation.Score >= 0.6",
+                        Intent = "Handoff",
+                        Condition = "#Handoff.Score >= 0.6",
                         Actions = new List<Dialog> ()
                         {
-                            new CodeAction(DetectLanguage),
-                            new EmitEvent("Language Change"),
-                            new SendActivity("${ConversationIntent()}") // TODO: Replace with QnA
+                            new SendActivity("${HandoffIntent()}"),
                         }
                     },
-                    new OnUnknownIntent()
-                    {
-                        Actions = new List<Dialog>() {
-                            new CodeAction(DetectLanguage),
-                            new EmitEvent("Language Change"),
-                            new SendActivity("${UnknownIntent()}"),
-                        }
-                    },
+
+                    // INTENT:RESOURCE ========================================
                     new OnIntent()
                     {
                         Intent = "Resource",
@@ -159,12 +176,76 @@ namespace MHBot
                                 },
                             },
                             new SendActivity("${EndInfo()}"),
-                            new CodeAction(ProcessKeywords),
-                            new SendActivity("${DisplayResources()}"),
+                            new SendActivity("${DisplayResourcesPrompt()}"),
+                            new CodeAction(DisplayResources),
+                            new SendActivity("${DisplayResourcesFollowUp()}"),
                             new EndDialog(),
                         }
-                    }
-            }
+                    },
+
+                    // QnA vs. LUIS ===========================================
+                    new OnChooseIntent()
+                    {
+                        Actions = new List<Dialog>()
+                        {
+                            // Do language detection feature
+                            new CodeAction(DetectLanguage),
+                            new EmitEvent("Language Change"),
+
+                            // Get the confidence scores from both LUIS and QnA
+                            new SetProperties()
+                            {
+                                Assignments = new List<PropertyAssignment>()
+                                {
+                                    new PropertyAssignment()
+                                    {
+                                        Property = "dialog.luisResult",
+                                        Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'LUIS_{nameof(RootDialog)}')]\")"
+                                    },
+                                    new PropertyAssignment()
+                                    {
+                                        Property = "dialog.qnaResult",
+                                        Value = $"=jPath(turn.recognized, \"$.candidates[?(@.id == 'QnA_{nameof(RootDialog)}')]\")"
+                                    },
+                                }
+                            },
+                            // new SendActivity("${ShowConfidence()}"),
+
+                            // Rule 1: If QnA is fairly confident and is more confident than LUIS, then QnA it is
+                            new IfCondition()
+                            {
+                                Condition = "dialog.qnaResult.score > dialog.luisResult.score && dialog.qnaResult.score > 0.75",
+                                Actions = new List<Dialog>()
+                                {
+                                    // By Emitting a recognized intent event with the recognition result from LUIS, adaptive dialog
+                                    // will evaluate all triggers with that recognition result.
+                                    new EmitEvent()
+                                    {
+                                        EventName = AdaptiveEvents.RecognizedIntent,
+                                        EventValue = "=dialog.qnaResult.result"
+                                    },
+                                    new BreakLoop()
+                                }
+                            },
+                            // Rule 2: If the other way around
+                            new IfCondition()
+                            {
+                                Condition = "dialog.luisResult.score > 0.6",
+                                Actions = new List<Dialog>()
+                                {
+                                    new EmitEvent()
+                                    {
+                                        EventName = AdaptiveEvents.RecognizedIntent,
+                                        EventValue = "=dialog.luisResult.result"
+                                    },
+                                    new BreakLoop()
+                                }
+                            },
+                            // Rule 3: If none works (acts as OnUnknownIntent)
+                            new SendActivity("${UnknownIntent()}")
+                        },
+                    },
+                }
             };
 
             // Add named dialogs to the DialogSet. These names are saved in the dialog state.
@@ -190,43 +271,61 @@ namespace MHBot
             Console.WriteLine($"Detected language {language.Name} with confidence score {language.ConfidenceScore}.");
             return await dc.EndDialogAsync();
         }
-        private static async Task<DialogTurnResult> ProcessKeywords(DialogContext dc, System.Object options)
+        private static async Task<DialogTurnResult> DisplayResources(DialogContext dc, System.Object options)
         {
-            // All hail https://stackoverflow.com/questions/62861153/how-to-convert-from-xml-to-json-within-adaptive-dialog-httprequest/62924035#62924035
+            /* 
+            All hail https://stackoverflow.com/questions/62861153/how-to-convert-from-xml-to-json-within-adaptive-dialog-httprequest/62924035#62924035
+            */
+
+            // FIRST: PROCESS KEYWORDS
             Console.WriteLine("\n\nProcessing\n\n");
             var keywords = dc.State.GetValue("conversation.keywords", () => new string[0]);
-            string resourcesAsStr;
 
-            // TODO: INSERT KEYWORDS->TAGS->RESOURCES CODE HERE
-            Console.WriteLine(string.Join(", ", keywords));
+            // Displaying results ---------------------------------------------------
+            Console.WriteLine($"> Keywords are: [{string.Join(", ", keywords)}]");
             List<List<WordProb>> tags = _inputProcessor.GetTags(keywords);
-            Console.WriteLine("Got {0}", tags);
+            Console.WriteLine("> Tags are as follows:");
             foreach (List<WordProb> wpL in tags)
             {
+                Console.WriteLine(" ");
                 foreach (WordProb wp in wpL)
                 {
-                    Console.WriteLine(wp.ToStr());
+                    Console.WriteLine($"->{wp.ToStr()}");
                 }
             }
             List<Resource> resources = _inputProcessor.GetResources(tags);
             Console.WriteLine("Got resources");
-            List<string> resourceStrings = new List<string>();
-            foreach (Resource r in resources)
+            // -------------------------------------------------------------------------
+
+            // THEN: DISPLAY RESULTS
+            var attachments = new List<Attachment>();
+            foreach (Resource resource in resources)
             {
-                resourceStrings.Add(r.ToStr());
+                attachments.Add(GetResourceCard(resource).ToAttachment());
             }
-            resourcesAsStr = string.Join("\n", resourceStrings);
-            ///////////////////////////////////
 
-            // TODO: Delete this, as this will be temprorary
-            // resourcesAsStr = string.Join(", ", keywords);
-            /////////////////////////////////////////
+            // Reply to the activity we received with an activity.
+            var reply = MessageFactory.Attachment(attachments);
+            reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
+            await dc.Context.SendActivityAsync(reply);
 
-            dc.State.SetValue("conversation.result", resourcesAsStr);
+            // Reset the embedding to be used for next resource intent
             _inputProcessor.resetCurrEmb();
+
             return await dc.EndDialogAsync();
         }
 
+        private static ThumbnailCard GetResourceCard(Resource resource)
+        {
+            return new ThumbnailCard
+            {
+                Title = resource.title,
+                Subtitle = resource.subtitle,
+                Text = resource.info,
+                Images = new List<CardImage> { new CardImage(resource.imageURL) },
+                Buttons = new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "Website", value: resource.link) },
+            };
+        }
         private static async Task<DialogTurnResult> UpdateKeywords(DialogContext dc, System.Object options)
         {
             Console.WriteLine("\n\nUpdating Keywords\n\n");
@@ -295,8 +394,8 @@ namespace MHBot
             {
                 Recognizers = new List<Recognizer>()
                 {
-                    GetLuisRecognizer(configuration),
-                    GetQnARecognizer(configuration)
+                    GetQnARecognizer(configuration),
+                    GetLuisRecognizer(configuration)
                 }
             };
         }
