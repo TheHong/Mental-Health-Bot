@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.AI.Luis;
 using Microsoft.Bot.Builder.AI.QnA.Recognizers;
 using Microsoft.Bot.Builder.Dialogs.Adaptive.Recognizers;
@@ -20,7 +21,7 @@ using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
 using Azure.AI.TextAnalytics;
 using Azure;
-
+using Microsoft.Bot.Schema;
 using WordVectors;
 
 namespace MHBot
@@ -175,8 +176,9 @@ namespace MHBot
                                 },
                             },
                             new SendActivity("${EndInfo()}"),
-                            new CodeAction(ProcessKeywords),
-                            new SendActivity("${DisplayResources()}"),
+                            new SendActivity("${DisplayResourcesPrompt()}"),
+                            new CodeAction(DisplayResources),
+                            new SendActivity("${DisplayResourcesFollowUp()}"),
                             new EndDialog(),
                         }
                     },
@@ -269,14 +271,17 @@ namespace MHBot
             Console.WriteLine($"Detected language {language.Name} with confidence score {language.ConfidenceScore}.");
             return await dc.EndDialogAsync();
         }
-        private static async Task<DialogTurnResult> ProcessKeywords(DialogContext dc, System.Object options)
+        private static async Task<DialogTurnResult> DisplayResources(DialogContext dc, System.Object options)
         {
-            // All hail https://stackoverflow.com/questions/62861153/how-to-convert-from-xml-to-json-within-adaptive-dialog-httprequest/62924035#62924035
+            /* 
+            All hail https://stackoverflow.com/questions/62861153/how-to-convert-from-xml-to-json-within-adaptive-dialog-httprequest/62924035#62924035
+            */
+
+            // FIRST: PROCESS KEYWORDS
             Console.WriteLine("\n\nProcessing\n\n");
             var keywords = dc.State.GetValue("conversation.keywords", () => new string[0]);
-            string resourcesAsStr;
 
-            // Displaying results -------
+            // Displaying results ---------------------------------------------------
             Console.WriteLine($"> Keywords are: [{string.Join(", ", keywords)}]");
             List<List<WordProb>> tags = _inputProcessor.GetTags(keywords);
             Console.WriteLine("> Tags are as follows:");
@@ -290,18 +295,37 @@ namespace MHBot
             }
             List<Resource> resources = _inputProcessor.GetResources(tags);
             Console.WriteLine("Got resources");
-            List<string> resourceStrings = new List<string>();
-            foreach (Resource r in resources)
-            {
-                resourceStrings.Add(r.ToStr());
-            }
-            resourcesAsStr = string.Join("\n", resourceStrings);
+            // -------------------------------------------------------------------------
 
-            dc.State.SetValue("conversation.result", resourcesAsStr);
+            // THEN: DISPLAY RESULTS
+            var attachments = new List<Attachment>();
+            foreach (Resource resource in resources)
+            {
+                attachments.Add(GetResourceCard(resource).ToAttachment());
+            }
+
+            // Reply to the activity we received with an activity.
+            var reply = MessageFactory.Attachment(attachments);
+            reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
+            await dc.Context.SendActivityAsync(reply);
+
+            // Reset the embedding to be used for next resource intent
             _inputProcessor.resetCurrEmb();
+
             return await dc.EndDialogAsync();
         }
 
+        private static ThumbnailCard GetResourceCard(Resource resource)
+        {
+            return new ThumbnailCard
+            {
+                Title = resource.title,
+                Subtitle = resource.subtitle,
+                Text = resource.info,
+                Images = new List<CardImage> { new CardImage(resource.imageURL) },
+                Buttons = new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "Website", value: resource.link) },
+            };
+        }
         private static async Task<DialogTurnResult> UpdateKeywords(DialogContext dc, System.Object options)
         {
             Console.WriteLine("\n\nUpdating Keywords\n\n");

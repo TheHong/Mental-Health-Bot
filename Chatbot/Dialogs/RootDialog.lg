@@ -44,6 +44,7 @@
 
 # UnknownIntent
 - ${Apologize()}, I didn't understand that. Could you try again?
+- ${Apologize()}, I didn't catch that. Could you try again?
 
 # HandoffIntent
 - Okay, please hold on. I'm transferring this conversation to a person.
@@ -78,9 +79,12 @@
 - I will now get resources for you.
 - Let me get the resources. I'll be back in a sec.
 
-# DisplayResources
-- Here's I found for you: ${conversation.result}
-- Here's what I got: ${conversation.result}
+# DisplayResourcesPrompt
+- Here's I found for you.
+- Here's what I got.
+
+# DisplayResourcesFollowUp
+- The above are only the top 3 matches. There are more resources that I found. Let me know if you want more.
 
 # ShowLanguageSample
 - IF: ${conversation.currLanguage == "Chinese_Traditional" || conversation.currLanguage == "Chinese_Simplified"}
