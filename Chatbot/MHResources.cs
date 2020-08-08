@@ -31,35 +31,47 @@ namespace MHBot
         Embedding tag_list_emb = new Embedding();
         Embedding key_words_emb = new Embedding();
         public List<Resource> all_resources = new List<Resource>();
-        string[] tag_list;
+        string[] tagList;
         int num_resources = 0;
 
-        public InputProcessing(){
+        public InputProcessing()
+        {
             gv.LoadFromFile(globals.GV_PATH);
-            tag_list = File.ReadAllText(globals.TAG_PATH).Split(globals.DELIM);
-            tag_list = Array.ConvertAll(tag_list, d => d.ToLower());
-            tag_list_emb.Load(this.tag_list, gv);
+            tagList = File.ReadAllText(globals.TAG_PATH).Split(globals.DELIM);
+            tagList = Array.ConvertAll(tagList, d => d.ToLower());
+            tag_list_emb.Load(this.tagList, gv);
         }
         public void load_resources(string path)
         {
             using (StreamReader sr = File.OpenText(path))
             {
-
                 string line;
                 while ((line = sr.ReadLine()) != null)
                 {
-                    this.num_resources++;
+                    // Extracting info of the current line/row
                     string[] parts = line.Split('\t');
-                    string[] pos_tags = parts[1].ToLower().Split(globals.DELIM); //also remove punctuations             
+
+                    // Get tags
+                    string[] possibleTags = parts[1].ToLower().Split(globals.DELIM); //also remove punctuations             
                     List<string> tags = new List<string>();
-                    foreach (string word in pos_tags)
+                    foreach (string word in possibleTags)
                     {
-                        if (tag_list.Contains(word))
+                        if (tagList.Contains(word))
                         {
                             tags.Add(word);
                         }
                     }
-                    all_resources.Add(new Resource() { title = parts[0], tags = tags });
+
+                    // Create and add resource
+                    all_resources.Add(new Resource() { 
+                        title = parts[0],
+                        subtitle = parts[1],
+                        link = parts[2],
+                        info = parts[3],
+                        tags = tags 
+                    });
+
+                    this.num_resources++;
                 }
             }
         }
@@ -102,10 +114,11 @@ namespace MHBot
             return resources;
         }
 
-        public void resetCurrEmb(){
+        public void resetCurrEmb()
+        {
             key_words_emb.Reset();
         }
-        
+
     }
-    
+
 }
