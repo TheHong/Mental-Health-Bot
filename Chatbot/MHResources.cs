@@ -52,7 +52,7 @@ namespace MHBot
                     string[] parts = line.Split('\t');
 
                     // Get tags
-                    string[] possibleTags = parts[1].ToLower().Split(globals.DELIM); //also remove punctuations             
+                    string[] possibleTags = parts[6].ToLower().Split(globals.DELIM); //also remove punctuations             
                     List<string> tags = new List<string>();
                     foreach (string word in possibleTags)
                     {
@@ -65,9 +65,10 @@ namespace MHBot
                     // Create and add resource
                     all_resources.Add(new Resource() { 
                         title = parts[0],
-                        subtitle = parts[1],
-                        link = parts[2],
-                        info = parts[3],
+                        subtitle = $"{parts[1]} ({parts[2]})",
+                        link = parts[3],
+                        info = parts[4],
+                        imageURL = parts[5],
                         tags = tags 
                     });
 
