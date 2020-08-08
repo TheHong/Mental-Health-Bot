@@ -66,18 +66,23 @@ namespace MHBot
                     }
 
                     // Create and add resource
-                    all_resources.Add(new Resource() { 
-                        title = parts[0],
-                        subtitle = $"{parts[1]} ({parts[2]})",
-                        link = parts[3],
-                        info = parts[4],
-                        imageURL = parts[5],
-                        tags = tags 
+                    all_resources.Add(new Resource()
+                    {
+                        title = GetPart(parts, 0),
+                        subtitle = $"{GetPart(parts, 1)} ({GetPart(parts,2)})",
+                        link = GetPart(parts, 3),
+                        info = GetPart(parts, 4),
+                        imageURL = GetPart(parts, 5),
+                        tags = tags
                     });
 
                     this.num_resources++;
                 }
             }
+        }
+        private string GetPart(string[] parts, int idx)
+        {
+            return string.IsNullOrEmpty(parts[idx]) ? "" : parts[idx];
         }
         public List<List<WordProb>> GetTags(string[] key_words)
         {

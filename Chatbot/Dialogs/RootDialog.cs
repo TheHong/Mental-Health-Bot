@@ -42,7 +42,7 @@ namespace MHBot
             _templates = Templates.ParseFile(Path.Combine(".", "Dialogs", "RootDialog.lg"));
             _textAnalyticsClient = GetTextAnalyticsClient(configuration);
             _inputProcessor = new InputProcessing();
-            _inputProcessor.load_resources();
+            _inputProcessor.load_resources("Data/UofT Mental Health Resources.txt");
 
 
             // Create instance of adaptive dialog. 
@@ -322,10 +322,11 @@ namespace MHBot
                 Title = resource.title,
                 Subtitle = resource.subtitle,
                 Text = resource.info,
-                Images = new List<CardImage> { new CardImage(resource.imageURL) },
-                Buttons = new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "Website", value: resource.link) },
+                Images = resource.imageURL == "" ? null : new List<CardImage> { new CardImage(resource.imageURL) },
+                Buttons = resource.link == "" ? null : new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "Website", value: resource.link) },
             };
         }
+
         private static async Task<DialogTurnResult> UpdateKeywords(DialogContext dc, System.Object options)
         {
             Console.WriteLine("\n\nUpdating Keywords\n\n");
