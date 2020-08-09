@@ -80,7 +80,7 @@
 - Let me get the resources. I'll be back in a sec.
 
 # DisplayResourcesPrompt
-- Here's I found for you.
+- Here's what I found for you.
 - Here's what I got.
 
 # DisplayResourcesFollowUp
@@ -98,3 +98,6 @@
 
 # ShowConfidence
 - LUIS (${dialog.luisResult.score}) and QnA(${dialog.qnaResult.score})
+
+# Debug
+- Entities found: ${turn.recognized.entities.Keyword}

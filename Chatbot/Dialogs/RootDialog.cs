@@ -143,43 +143,58 @@ namespace MHBot
                         Condition = "#Resource.Score >= 0.6",
                         Actions = new List<Dialog>()
                         {
-                            new SendActivity("${ResourceIntent()}"),
+                            new SendActivity("${conversation.moreInfoToGive}"),
+                            new IfCondition(){
+                                Condition = "conversation.moreInfoToGive == 0",
+                                Actions = new List<Dialog>{
+                                    new SendActivity("${Debug()}"),
+                                    new SendActivity("${ResourceIntent()}"),
 
-                            // Save any entities returned by LUIS.
-                            new CodeAction(UpdateKeywords), // Gets list of entities
-                            // new SetProperty() // <- Does not store the list of entities
-                            // {
-                            //     Property = "conversation.keywords",
-                            //     Value = "=@Keyword" // i.e. turn.recognized.entities.Keyword
-                            // },
+                                    // Save any entities returned by LUIS.
+                                    new CodeAction(UpdateKeywords), // Gets list of entities
+                                    // new SetProperty() // <- Does not store the list of entities
+                                    // {
+                                    //     Property = "conversation.keywords",
+                                    //     Value = "=@Keyword" // i.e. turn.recognized.entities.Keyword
+                                    // },
 
-                            // Converse with user
-                            new ConfirmInput()
-                            {
-                                Prompt = new ActivityTemplate("${MoreInfoPrompt()}"),
-                                Property = "turn.moreInfoToGive",
-                                AllowInterruptions = "false"
-                            },
-                            new IfCondition()
-                            {
-                                Condition = "turn.moreInfoToGive == true",
-                                Actions = new List<Dialog>()
-                                {
-                                        new TextInput()
+                                    // Converse with user
+                                    new ConfirmInput()
+                                    {
+                                        Prompt = new ActivityTemplate("${MoreInfoPrompt()}"),
+                                        Property = "conversation.moreInfoToGive",
+                                        AllowInterruptions = "false"
+                                    },
+                                    new IfCondition()
+                                    {
+                                        Condition = "conversation.moreInfoToGive == true",
+                                        Actions = new List<Dialog>()
                                         {
-                                            Prompt = new ActivityTemplate("${AskForMoreInfo()}"),
-                                            Property = "conversation.moreInfo",
-                                            AllowInterruptions = "false"
+                                                new TextInput()
+                                                {
+                                                    Prompt = new ActivityTemplate("${AskForMoreInfo()}"),
+                                                    Property = "conversation.moreInfo",
+                                                    AllowInterruptions = "true" // Needs to be true so user input gets analyzed by LUIS again
+                                                },
+
                                         },
-                                        new CodeAction(UpdateKeywords),
-                                        new SendActivity("${EndMoreInfo()}"),
+                                    },
                                 },
-                            },
-                            new SendActivity("${EndInfo()}"),
-                            new SendActivity("${DisplayResourcesPrompt()}"),
-                            new CodeAction(DisplayResources),
-                            new SendActivity("${DisplayResourcesFollowUp()}"),
-                            new EndDialog(),
+                                ElseActions = new List<Dialog>{
+                                    new SetProperty(){ // Reset
+                                        Property = "conversation.moreInfoToGive",
+                                        Value = "=false"
+                                    },
+                                    new SendActivity("${Debug()}"),
+                                    new CodeAction(UpdateKeywords),
+                                    new SendActivity("${EndMoreInfo()}"),
+                                    new SendActivity("${EndInfo()}"),
+                                    new SendActivity("${DisplayResourcesPrompt()}"),
+                                    new CodeAction(DisplayResources),
+                                    new SendActivity("${DisplayResourcesFollowUp()}"),
+                                    new EndDialog(),
+                                }
+                            }
                         }
                     },
 
@@ -209,7 +224,7 @@ namespace MHBot
                                     },
                                 }
                             },
-                            // new SendActivity("${ShowConfidence()}"),
+                            new SendActivity("${ShowConfidence()}"),
 
                             // Rule 1: If QnA is fairly confident and is more confident than LUIS, then QnA it is
                             new IfCondition()
@@ -286,7 +301,7 @@ namespace MHBot
             */
 
             // FIRST: PROCESS KEYWORDS
-            Console.WriteLine("\n\nProcessing\n\n");
+            Console.WriteLine("Processing");
             var keywords = dc.State.GetValue("conversation.keywords", () => new string[0]);
 
             // Displaying results ---------------------------------------------------
@@ -337,10 +352,13 @@ namespace MHBot
 
         private static async Task<DialogTurnResult> UpdateKeywords(DialogContext dc, System.Object options)
         {
-            Console.WriteLine("\n\nUpdating Keywords\n\n");
+            Console.WriteLine("Updating Keywords");
             var currKeywords = dc.State.GetValue("conversation.keywords", () => new string[0]);
             var incomingKeywords = dc.State.GetValue("turn.recognized.entities.Keyword", () => new string[0]);
+            Console.WriteLine($"Previous Keywords are: {string.Join(",", currKeywords)}");
+            Console.WriteLine($"Incoming Keywords are: {string.Join(",", incomingKeywords)}");
             var keywords = currKeywords.Concat(incomingKeywords).Distinct().ToArray();
+            Console.WriteLine($"Keywords are now: {string.Join(",", keywords)}");
             dc.State.SetValue("conversation.keywords", keywords);
             return await dc.EndDialogAsync();
         }
@@ -377,7 +395,12 @@ namespace MHBot
                                 {
                                     Property = "conversation.currLanguage",
                                     Value = "English"
-                                }
+                                },
+                                new PropertyAssignment()
+                                {
+                                    Property = "conversation.moreInfoToGive",
+                                    Value = "=0"
+                                },
                             }
                         },
                     }
