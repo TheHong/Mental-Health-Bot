@@ -35,6 +35,9 @@ namespace MHBot
 
         private static InputProcessing _inputProcessor;
 
+        private static int _shortDelayLength = 2000;
+        private static int _longDelayLength = 2000;
+
         public RootDialog(IConfiguration configuration)
            : base(nameof(RootDialog))
         {
@@ -100,13 +103,13 @@ namespace MHBot
                     new OnIntent()
                     {
                         Intent = "Urgent",
-                        Condition = "#Urgent.Score >= 0.75",
+                        Condition = "#Urgent.Score >= 0.9",
                         Actions = new List<Dialog> ()
                         {
                             new SendActivity("${UrgentIntent()}"),
                             new ConfirmInput()
                             {
-                                Prompt = new ActivityTemplate("${UrgentIntentFollowUp()}"),
+                                Prompt = new ActivityTemplate("${HandoffPrompt()}"),
                                 Property = "turn.handoff",
                                 AllowInterruptions = "false"
                             },
@@ -143,12 +146,11 @@ namespace MHBot
                         Condition = "#Resource.Score >= 0.6",
                         Actions = new List<Dialog>()
                         {
-                            new SendActivity("${conversation.moreInfoToGive}"),
                             new IfCondition(){
                                 Condition = "conversation.moreInfoToGive == 0",
                                 Actions = new List<Dialog>{
-                                    new SendActivity("${Debug()}"),
                                     new SendActivity("${ResourceIntent()}"),
+                                    new CodeAction(ShortDelay),
 
                                     // Save any entities returned by LUIS.
                                     new CodeAction(UpdateKeywords), // Gets list of entities
@@ -183,25 +185,74 @@ namespace MHBot
                                 ElseActions = new List<Dialog>{
                                     new SetProperty(){ // Reset
                                         Property = "conversation.moreInfoToGive",
-                                        Value = "=false"
+                                        Value = "=0"
                                     },
-                                    new SendActivity("${Debug()}"),
                                     new CodeAction(UpdateKeywords),
                                     new SendActivity("${EndMoreInfo()}"),
-                                    new SendActivity("${EndInfo()}"),
-                                    new SendActivity("${DisplayResourcesPrompt()}"),
-                                    new CodeAction(DisplayResources),
-                                    new SendActivity("${DisplayResourcesFollowUp()}"),
-                                    new EndDialog(),
                                 }
-                            }
+                            },
+                            new SendActivity("${EndInfo()}"),
+                            new CodeAction(LongDelay),
+                            new SendActivity("${DisplayResourcesPrompt()}"),
+                            new CodeAction(ShortDelay),
+                            new CodeAction(DisplayResources),
+                            new IfCondition(){
+                                Condition = "conversation.resourcesFound == true",
+                                Actions = new List<Dialog>{
+                                    new CodeAction(ShortDelay),
+                                    new SendActivity("${DisplayResourcesFollowUp()}"),
+                                },
+                                ElseActions = new List<Dialog>{
+                                    new SendActivity("${NoResourcesFound()}"),
+                                    new ConfirmInput()
+                                    {
+                                        Prompt = new ActivityTemplate("${HandoffPrompt()}"),
+                                        Property = "turn.handoff",
+                                        AllowInterruptions = "false"
+                                    },
+                                    new IfCondition()
+                                    {
+                                        Condition = "turn.handoff == true",
+                                        Actions = new List<Dialog>()
+                                        {
+                                            new SendActivity("${HandoffIntent()}")
+                                        },
+                                        ElseActions = new List<Dialog>()
+                                        {
+                                            new SendActivity("${HandoffIntentCancel()}")
+                                        },
+                                    },
+                                }
+                            },
+                            new SetProperties()
+                            {
+                                Assignments = new List<PropertyAssignment>()
+                                {
+                                    new PropertyAssignment()
+                                    {
+                                        Property = "conversation.keywords",
+                                        Value = "=[]"
+                                    },
+                                    new PropertyAssignment()
+                                    {
+                                        Property = "conversation.currLanguage",
+                                        Value = "English"
+                                    },
+                                    new PropertyAssignment()
+                                    {
+                                        Property = "conversation.moreInfoToGive",
+                                        Value = "=0"
+                                    },
+                                }
+                            },
+                            new EndDialog()
                         }
                     },
 
-                    // QnA vs. LUIS ===========================================
-                    new OnChooseIntent()
-                    {
-                        Actions = new List<Dialog>()
+                // QnA vs. LUIS ===========================================
+                new OnChooseIntent()
+                {
+                    Actions = new List<Dialog>()
                         {
                             // Do language detection feature
                             new CodeAction(DetectLanguage),
@@ -224,7 +275,7 @@ namespace MHBot
                                     },
                                 }
                             },
-                            new SendActivity("${ShowConfidence()}"),
+                            // new SendActivity("${ShowConfidence()}"),
 
                             // Rule 1: If QnA is fairly confident and is more confident than LUIS, then QnA it is
                             new IfCondition()
@@ -259,16 +310,17 @@ namespace MHBot
                             // Rule 3: If none works (acts as OnUnknownIntent)
                             new SendActivity("${UnknownIntent()}")
                         },
-                    },
-                    new OnUnknownIntent(){
-                        Actions = new List<Dialog>()
+                },
+                new OnUnknownIntent()
+                {
+                    Actions = new List<Dialog>()
                         {
                             new CodeAction(DetectLanguage),
                             new EmitEvent("Language Change"),
                             new SendActivity("${UnknownIntent()}")
                         }
-                    }
                 }
+            }
             };
 
             // Add named dialogs to the DialogSet. These names are saved in the dialog state.
@@ -277,6 +329,25 @@ namespace MHBot
             // The initial child Dialog to run.
             InitialDialogId = nameof(AdaptiveDialog);
         }
+
+        private static async Task<DialogTurnResult> LongDelay(DialogContext dc, System.Object options)
+        {
+            Activity reply = dc.Context.Activity.CreateReply();
+            reply.Type = ActivityTypes.Typing;
+            reply.Text = null;
+
+            await dc.Context.SendActivityAsync(reply);
+            await Task.Delay(_longDelayLength).ContinueWith(t => { });
+
+            return await dc.EndDialogAsync();
+        }
+
+        private static async Task<DialogTurnResult> ShortDelay(DialogContext dc, System.Object options)
+        {
+            await Task.Delay(_shortDelayLength).ContinueWith(t => { });
+            return await dc.EndDialogAsync();
+        }
+
         private static async Task<DialogTurnResult> ResetLanguage(DialogContext dc, System.Object options)
         {
             dc.State.SetValue("conversation.currLanguage", "English");
@@ -307,33 +378,42 @@ namespace MHBot
             // Displaying results ---------------------------------------------------
             Console.WriteLine($"> Keywords are: [{string.Join(", ", keywords)}]");
             List<List<WordProb>> tags = _inputProcessor.GetTags(keywords);
-            Console.WriteLine("> Tags are as follows:");
-            foreach (List<WordProb> wpL in tags)
+            if (tags.Any())
             {
-                Console.WriteLine(" ");
-                foreach (WordProb wp in wpL)
+                Console.WriteLine("> Tags are as follows:");
+                foreach (List<WordProb> wpL in tags)
                 {
-                    Console.WriteLine($"->{wp.ToStr()}");
+                    Console.WriteLine(" ");
+                    foreach (WordProb wp in wpL)
+                    {
+                        Console.WriteLine($"->{wp.ToStr()}");
+                    }
                 }
-            }
-            List<Resource> resources = _inputProcessor.GetResources(tags);
-            Console.WriteLine("Got resources");
-            // -------------------------------------------------------------------------
+                List<Resource> resources = _inputProcessor.GetResources(tags);
+                Console.WriteLine("Got resources");
+                // -------------------------------------------------------------------------
 
-            // THEN: DISPLAY RESULTS
-            var attachments = new List<Attachment>();
-            foreach (Resource resource in resources)
+                // THEN: DISPLAY RESULTS
+                var attachments = new List<Attachment>();
+                foreach (Resource resource in resources)
+                {
+                    attachments.Add(GetResourceCard(resource).ToAttachment());
+                }
+
+                // Reply to the activity we received with an activity.
+                var reply = MessageFactory.Attachment(attachments);
+                reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
+                await dc.Context.SendActivityAsync(reply);
+
+                // Reset the embedding to be used for next resource intent
+                _inputProcessor.resetCurrEmb();
+
+                dc.State.SetValue("conversation.resourcesFound", true);
+            }
+            else
             {
-                attachments.Add(GetResourceCard(resource).ToAttachment());
+                dc.State.SetValue("conversation.resourcesFound", false);
             }
-
-            // Reply to the activity we received with an activity.
-            var reply = MessageFactory.Attachment(attachments);
-            reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
-            await dc.Context.SendActivityAsync(reply);
-
-            // Reset the embedding to be used for next resource intent
-            _inputProcessor.resetCurrEmb();
 
             return await dc.EndDialogAsync();
         }
@@ -346,7 +426,7 @@ namespace MHBot
                 Subtitle = resource.subtitle,
                 Text = resource.info,
                 Images = resource.imageURL == "" ? null : new List<CardImage> { new CardImage(resource.imageURL) },
-                Buttons = resource.link == "" ? null : new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "Website", value: resource.link) },
+                Buttons = resource.link == "" ? null : new List<CardAction> { new CardAction(ActionTypes.OpenUrl, "Go to Website", value: resource.link) },
             };
         }
 
@@ -355,10 +435,7 @@ namespace MHBot
             Console.WriteLine("Updating Keywords");
             var currKeywords = dc.State.GetValue("conversation.keywords", () => new string[0]);
             var incomingKeywords = dc.State.GetValue("turn.recognized.entities.Keyword", () => new string[0]);
-            Console.WriteLine($"Previous Keywords are: {string.Join(",", currKeywords)}");
-            Console.WriteLine($"Incoming Keywords are: {string.Join(",", incomingKeywords)}");
             var keywords = currKeywords.Concat(incomingKeywords).Distinct().ToArray();
-            Console.WriteLine($"Keywords are now: {string.Join(",", keywords)}");
             dc.State.SetValue("conversation.keywords", keywords);
             return await dc.EndDialogAsync();
         }

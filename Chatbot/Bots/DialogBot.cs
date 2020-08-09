@@ -28,7 +28,7 @@ namespace MHBot
 
         public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default(CancellationToken))
         {
-            Console.WriteLine("\n ----> Bot is Starting <-------- \n");
+            // Console.WriteLine("\n ----> Bot is Starting <-------- \n");
             Logger.LogInformation("Running dialog with Activity.");
             await DialogManager.OnTurnAsync(turnContext, cancellationToken: cancellationToken).ConfigureAwait(false);
         }

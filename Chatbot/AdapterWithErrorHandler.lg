@@ -1,0 +1,18 @@
+﻿> Language Generation definition file. 
+> See https://aka.ms/language-generation to learn more
+
+# SomethingWentWrong
+- IF: ${contains(Message, "dictionary")}
+    - ${ErrorPrefix()}, ${ErrorSuffix()}\nError:${Message}. NOTE: Most likely because the keyword is not found in the corpus.
+- ELSE:
+    - ${ErrorPrefix()}, ${ErrorSuffix()}\nError:${Message}
+
+# ErrorSuffix
+- it looks like something went wrong.
+- I seem to have run into a snag. We need to start over. 
+- something is not right. We need to start over. 
+
+# ErrorPrefix
+- Oops
+- Sorry
+- I apologize 
