@@ -20,19 +20,27 @@
 - Hello, my name is Felix!
 
 # WelcomeCardBody
-- ${WelcomeCardBodyP1()} ${WelcomeCardBodyP2()} ${WelcomeCardBodyP3()} ${WelcomeCardBodyP4()}
+- ${WelcomeCardBodyP1()} ${WelcomeCardBodyP2()} ${WelcomeCardBodyP3()} ${WelcomeCardBodyP4()} ${WelcomeCardBodyP5()} ${WelcomeCardBodyP6()}
 
 # WelcomeCardBodyP1
-- I am a chatbot designed to talk to you about mental health resources available at the ${Location()}.
+- I am a chatbot designed to guide you through the **mental health resources** available at the ${Location()}.
 
 # WelcomeCardBodyP2
-- As a chatbot, I am not human. As a result, please note that however human-like my responses may be, my conversation skills are still limited.
+- As a chatbot, **I am not human**. So, however human-like my responses may be, my conversation skills are still limited.
 
 # WelcomeCardBodyP3
-- At any time you have the option to speak with a human operator.
+- I also wanted to let you know that I am sending our **conversation data** to Microsoft Azure Cognitive Services in order for me to better understand and help you.
 
 # WelcomeCardBodyP4
-- You may now type something are click on one of the following options to get started.
+- Please note that I am **not intented to be used to give medical or life-critical advice**. That should be left to a real professional. I am just a bot :) !
+
+# WelcomeCardBodyP5
+- Furthermore, there is no human monitoring our conversation. That being said, at any time you have the option to speak with one of my human colleagues.
+
+# WelcomeCardBodyP6
+- To get started, feel free to type anything or click on one of the following options.
+- Feel free to type anything or click on one of the following options to get started.
+
 
 
 > Dealing with intents ==============================================
