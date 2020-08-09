@@ -71,7 +71,7 @@ namespace MHBot
                         title = GetPart(parts, 0),
                         subtitle = $"{GetPart(parts, 1)} ({GetPart(parts,2)})",
                         link = GetPart(parts, 3),
-                        info = GetPart(parts, 4),
+                        info = $"({GetPart(parts, 0)}) {GetPart(parts, 4)}",
                         imageURL = GetPart(parts, 5),
                         tags = tags
                     });

@@ -100,7 +100,7 @@ namespace MHBot
                     new OnIntent()
                     {
                         Intent = "Urgent",
-                        Condition = "#Urgent.Score >= 0.6",
+                        Condition = "#Urgent.Score >= 0.75",
                         Actions = new List<Dialog> ()
                         {
                             new SendActivity("${UrgentIntent()}"),
@@ -245,6 +245,14 @@ namespace MHBot
                             new SendActivity("${UnknownIntent()}")
                         },
                     },
+                    new OnUnknownIntent(){
+                        Actions = new List<Dialog>()
+                        {
+                            new CodeAction(DetectLanguage),
+                            new EmitEvent("Language Change"),
+                            new SendActivity("${UnknownIntent()}")
+                        }
+                    }
                 }
             };
 
