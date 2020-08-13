@@ -1,0 +1,118 @@
+﻿> Language Generation definition file. 
+> Prebuilt functions: https://docs.microsoft.com/en-us/azure/bot-service/adaptive-expressions/adaptive-expressions-prebuilt-functions?view=azure-bot-service-4.0
+
+> Some meta =============================================
+# Location
+- University of Toronto
+
+
+> Welcome Card ==============================================
+# WelcomeCard
+[Activity
+    Attachments = ${json(AdaptiveCard.Definition())}
+]
+
+# AdaptiveCard.Definition
+- ${fromFile('./welcomecard.json')}
+
+# WelcomeCardTitle
+- Hi, my name is Felix!
+- Hello, my name is Felix!
+
+# WelcomeCardBody
+- ${WelcomeCardBodyP1()} ${WelcomeCardBodyP2()} ${WelcomeCardBodyP3()} ${WelcomeCardBodyP4()} ${WelcomeCardBodyP5()} ${WelcomeCardBodyP6()}
+
+# WelcomeCardBodyP1
+- I am a chatbot designed to guide you through the **mental health resources** available at the ${Location()}.
+
+# WelcomeCardBodyP2
+- As a chatbot, **I am not human**. So, however human-like my responses may be, my conversation skills are still limited.
+
+# WelcomeCardBodyP3
+- I also wanted to let you know that I am sending our **conversation data** to Microsoft Azure Cognitive Services in order for me to better understand and help you.
+
+# WelcomeCardBodyP4
+- Please note that I am **not intented to be used to give medical or life-critical advice**. That should be left to a real professional. I am just a bot :) !
+
+# WelcomeCardBodyP5
+- Furthermore, there is no human monitoring our conversation. That being said, at any time you have the option to speak with one of my human colleagues.
+
+# WelcomeCardBodyP6
+- To get started, feel free to type anything or click on one of the following options.
+- Feel free to type anything or click on one of the following options to get started.
+
+
+
+> Dealing with intents ==============================================
+# UrgentIntent
+- Please call 911. Campus police can also be found at 416-978-2222 (St. George and Scarborough) and 905-569-4333 (Mississauga).
+
+# HandoffPrompt
+- If you want, you could speak to one of my human colleagues directly. Would you like that?
+- Would you like to speak to an operator? I could redirect this chat to one.
+- Would you like me to redirect this chat to an operator?
+
+# UnknownIntent
+- ${Apologize()}, I didn't understand that. Could you try again?
+- ${Apologize()}, I didn't catch that. Could you try again?
+
+# HandoffIntent
+- Okay, please hold on. I'm transferring this conversation to a person.
+- Sounds good. I will transfer you to a person. Please hold on.
+- I will do that. Please wait as I transfer you to an operator for you.
+
+# HandoffIntentCancel
+- Okay, I'm still here for you.
+
+# Apologize
+- Sorry
+- My bad
+- Excuse me
+- Pardon me
+- I'm sorry
+
+# ResourceIntent
+- Let me redirect you to some resources.
+- I'm going to provide some resources that may be of help.
+
+# MoreInfoPrompt
+- I would love learn more. Can you tell me more about what's happening?
+- Could you tell me briefly about the situation so I can help you better?
+
+# AskForMoreInfo
+- Great. Please let me know what's on your mind before I get some resources for you.
+- That's amazing. I am listening.
+
+# EndMoreInfo
+- Thank you for telling me that.
+- Thank you for letting me know.
+
+# EndInfo
+- I will now get resources for you.
+- Let me get the resources. I'll be back in a sec.
+
+# NoResourcesFound
+- ${Apologize()}, I was not able to find any resources for you.
+
+# DisplayResourcesPrompt
+- Here's what I found for you.
+- Here's what I got.
+
+# DisplayResourcesFollowUp
+- The above are only the top 3 matches. There are more resources that I found. Let me know if you want more.
+
+# ShowLanguageSample
+- IF: ${conversation.currLanguage == "Chinese_Traditional" || conversation.currLanguage == "Chinese_Simplified"}
+    - 你好，我亦可以用中文来沟通！
+    - 你想用中文来沟通？没问题。除了英文，我也会中文！
+- ELSEIF: ${conversation.currLanguage == "French"}
+    - Bonjour! Je suis Felix et je peux aussi parler le français!
+    - Vous parlez le français? Je communiquerai en français. Quoi puis-je vous aider?
+- ELSE:
+    - Sorry, I don't speak ${conversation.currLanguage}.
+
+# ShowConfidence
+- LUIS (${dialog.luisResult.score}) and QnA(${dialog.qnaResult.score})
+
+# Debug
+- Entities found: ${turn.recognized.entities.Keyword}

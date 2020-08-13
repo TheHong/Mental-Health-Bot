@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Felix @ UofT</title>
+    <style>
+        body {
+            margin: 0px;
+            padding: 0px;
+            font-family: Segoe UI;
+        }
+
+        html,
+        body {
+            overflow: hidden;
+            height: 100%;
+        }
+        
+        #webchat{
+          position: absolute;
+          bottom: 0;
+          /*width: 50%;
+          max-height: 40%;*/
+          width: 90%;
+          max-height: 70%;
+          overflow: auto
+        }
+    </style>
+    <link rel="stylesheet" href="styles/header.css">
+    <link rel="stylesheet" href="styles/content.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadFrame();
+        });
+        var loadFrame = function () {
+            var iframe = document.createElement('iframe');
+            iframe.setAttribute("id", "iframe");
+            var offLineHTMLContent = "";
+            var frameElement = document.getElementById("how-to-iframe");
+            if (window.navigator.onLine) {
+                iframe.src = 'https://docs.botframework.com/static/abs/pages/f5.htm';
+                iframe.setAttribute("scrolling", "no");
+                iframe.setAttribute("frameborder", "0");
+                iframe.setAttribute("width", "100%");
+                iframe.setAttribute("height", "100%");
+                var frameDiv = document.getElementById("how-to-iframe");
+                frameDiv.appendChild(iframe);
+            } else {
+                frameElement.classList.add("remove-frame-height");
+            }
+        };
+    </script>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-inner-container">
+            <div class="header-icon" style="display: inline-block"></div>
+            <div class="header-text" style="display: inline-block">Felix @ UofT</div>
+        </div>
+    </header>
+    <div class="row">
+        <div class="column" class="main-content-area">
+            <!--<div class="content-title">Welcome!</div>
+            <div class="main-text main-text-p1">Start by typing "Hey Felix"</div>-->
+     
+            <!--Method 1: Embed directly-->
+            <!--<iframe src='https://webchat.botframework.com/embed/MHBot?s=<INSERT BOT SECRET HERE>'  style='min-width: 400px; width: 100%; min-height: 500px;'></iframe>-->
+ 
+            <!--Method 2: Using secret-->
+            <!--Method 3: Get token via request-->
+            <div id="webchat" role="main"></div>
+        </div>
+    </div>
+</body>
+
+
+<script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+<script src="userInfo.js"></script>
+<script src="renderBot.js"></script>
+</html>

@@ -1,9 +1,6 @@
 .vector_cache
 .idea
-userInfo.js
-appsettings.json
 bin
 obj
 .vscode
 Documents/~$etails.docx
-*.csproj
